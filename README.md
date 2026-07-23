@@ -11,10 +11,10 @@ All are commercial-safe (Apple's system voices, or Apache-2.0 / MIT *weights*) a
 | Model | License | Runtime | Runs on iPhone? | Cloning | Status | Best for |
 |---|---|---|---|---|---|---|
 | **Apple (system)** | Apple (free to use) | System | ✅ | — | ✅ built-in | zero-config default & fallback, every device |
-| **Kokoro-82M** | Apache-2.0 | CoreML / ANE | ✅ | — | ✅ compiled target | fast, light (9 langs, SSML) |
-| **PocketTTS** | MIT | CoreML | ✅ | ✅ | ✅ compiled target | small + cloning on mobile |
-| **Chatterbox** | MIT | MLX / GPU | ❌ Mac | ✅ | 🔌 reference | best-sounding, emotion + 10s cloning |
-| **Qwen3-TTS** | Apache-2.0 | MLX / GPU | ❌ Mac | ✅ | 🔌 reference | multilingual, long-form |
+| **Kokoro-82M** | Apache-2.0 | CoreML / ANE | ✅ | — | ✅ **verified** (live audio) | fast, light (9 langs, SSML) |
+| **PocketTTS** | MIT | CoreML | ✅ | ✅ | ✅ compiled | small + cloning on mobile |
+| **Chatterbox** | MIT | MLX / GPU | ❌ Mac | ✅ | ✅ compiled | best-sounding, emotion + 10s cloning |
+| **Qwen3-TTS** | Apache-2.0 | MLX / GPU | ❌ Mac | ✅ | ✅ compiled | multilingual, long-form |
 
 > **License hygiene:** only Apple's system voices and Apache/MIT-*weights* models are included. Restrictive models (Fish S2, F5-TTS, Higgs, XTTS) and Llama-licensed weights (Orpheus) are deliberately **not** supported.
 
@@ -56,14 +56,22 @@ try await engine.prepare { print("downloading… \(Int($0 * 100))%") }  // ~350 
 let audio = try await engine.synthesize("Hello from Kokoro.")
 ```
 
-**Chatterbox / Qwen3** (MLX, Mac-class) live in `Engines/` as reference adapters. To enable one: add mlx-audio-swift (templates are in the commented block in `Package.swift`), declare its target, move its file from `Engines/` into `Sources/`, and verify the SDK signatures.
+**Chatterbox / Qwen3** (MLX, Mac-class) — `import MLXTTS`:
+```swift
+import MLXTTS
+
+let engine = MLXEngine.chatterbox()   // or .qwen3()
+try await engine.prepare()            // downloads MLX weights (GB) on first run
+let audio = try await engine.synthesize("The best-sounding open model.")
+```
 
 ## Status
 
 - ✅ **Core (`SpeechSynthesizer`) — built + unit-tested (19 tests).** `SpokenAudio` WAV encode/decode, `TTSModel` metadata/licensing, `SynthesisOptions`, errors. Zero deps.
-- ✅ **AppleEngine — real, compiled, in the core.** Uses `AVSpeechSynthesizer`; no download, every device. (Its live render needs an app run loop, so it's guard-tested here and runs in-app.)
-- ✅ **KokoroTTS + PocketTTS — real, compiled targets** against **FluidAudio 0.15.2** (verified: correct actor API, WAV decode, `swift build` clean). First-run **synthesis downloads the model (~350 MB) from Hugging Face then runs on the ANE — confirm that live run on your machine** (the compile + wiring is done).
-- 🔌 **ChatterboxTTS + Qwen3-TTS — reference adapters in `Engines/`** against mlx-audio-swift's documented API. Enable + verify when you want the MLX/GPU (Mac-class) models.
+- ✅ **AppleEngine — real, compiled, in the core.** `AVSpeechSynthesizer`; no download, every device. (Live render needs an app run loop, so guard-tested here.)
+- ✅ **KokoroTTS — verified end-to-end.** Wraps **FluidAudio 0.15.2**; a live run downloaded the model (~197 MB) and produced real 24 kHz audio (2.88 s from a test sentence).
+- ✅ **PocketTTS — compiled** against FluidAudio 0.15.2 (same path as Kokoro; live run to confirm on your machine).
+- ✅ **MLXTTS (Chatterbox + Qwen3) — compiled** against **mlx-audio-swift** (MLX/GPU). One `MLXEngine` with `.chatterbox()` / `.qwen3()` factories over their shared `SpeechGenerationModel`. Live MLX inference (GB models) is the one bit left to confirm on-device.
 
 ## How model downloading works
 

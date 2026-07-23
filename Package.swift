@@ -15,9 +15,13 @@ let package = Package(
         .library(name: "KokoroTTS", targets: ["KokoroTTS"]),
         // PocketTTS (MIT) — CoreML, mobile, voice cloning. FluidAudio-backed.
         .library(name: "PocketTTS", targets: ["PocketTTS"]),
+        // Chatterbox (MIT) + Qwen3-TTS (Apache) — MLX/GPU, Mac-class. mlx-audio-swift.
+        .library(name: "MLXTTS", targets: ["MLXTTS"]),
     ],
     dependencies: [
         .package(url: "https://github.com/FluidInference/FluidAudio.git", exact: "0.15.2"),
+        .package(url: "https://github.com/Blaizzy/mlx-audio-swift.git", branch: "main"),
+        .package(url: "https://github.com/ml-explore/mlx-swift.git", .upToNextMajor(from: "0.30.6")),
     ],
     targets: [
         .target(
@@ -38,22 +42,17 @@ let package = Package(
                 .product(name: "FluidAudio", package: "FluidAudio"),
             ]
         ),
+        .target(
+            name: "MLXTTS",
+            dependencies: [
+                "SpeechSynthesizer",
+                .product(name: "MLXAudioTTS", package: "mlx-audio-swift"),
+                .product(name: "MLX", package: "mlx-swift"),
+            ]
+        ),
         .testTarget(
             name: "SpeechSynthesizerTests",
             dependencies: ["SpeechSynthesizer"]
         ),
     ]
 )
-
-// MARK: - MLX engine backends (opt-in, Mac-class)
-//
-// Chatterbox (MIT, best-sounding) and Qwen3-TTS (Apache, multilingual) run on
-// MLX/GPU. Their adapters live in `Engines/` as ready-to-wire reference code
-// against mlx-audio-swift. To enable one: add the dependency, declare its
-// target, and move its file into `Sources/<Target>/`.
-//
-//   dependencies += .package(url: "https://github.com/Blaizzy/mlx-audio-swift.git", from: "1.0.0")
-//   targets += .target(name: "ChatterboxTTS", dependencies: [
-//       "SpeechSynthesizer", .product(name: "MLXAudioTTS", package: "mlx-audio-swift")])
-//   targets += .target(name: "Qwen3TTS", dependencies: [
-//       "SpeechSynthesizer", .product(name: "MLXAudioTTS", package: "mlx-audio-swift")])
