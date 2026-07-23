@@ -8,16 +8,35 @@ let package = Package(
         .iOS(.v17)
     ],
     products: [
-        // Core: engine protocol + shared types. Zero external dependencies.
-        .library(
-            name: "SpeechSynthesizer",
-            targets: ["SpeechSynthesizer"]
-        ),
+        // Core: engine protocol + shared types + Apple's built-in engine. Zero
+        // external dependencies.
+        .library(name: "SpeechSynthesizer", targets: ["SpeechSynthesizer"]),
+        // Kokoro-82M (Apache-2.0) — CoreML/ANE, mobile. FluidAudio-backed.
+        .library(name: "KokoroTTS", targets: ["KokoroTTS"]),
+        // PocketTTS (MIT) — CoreML, mobile, voice cloning. FluidAudio-backed.
+        .library(name: "PocketTTS", targets: ["PocketTTS"]),
+    ],
+    dependencies: [
+        .package(url: "https://github.com/FluidInference/FluidAudio.git", exact: "0.15.2"),
     ],
     targets: [
         .target(
             name: "SpeechSynthesizer",
             dependencies: []
+        ),
+        .target(
+            name: "KokoroTTS",
+            dependencies: [
+                "SpeechSynthesizer",
+                .product(name: "FluidAudio", package: "FluidAudio"),
+            ]
+        ),
+        .target(
+            name: "PocketTTS",
+            dependencies: [
+                "SpeechSynthesizer",
+                .product(name: "FluidAudio", package: "FluidAudio"),
+            ]
         ),
         .testTarget(
             name: "SpeechSynthesizerTests",
@@ -26,22 +45,13 @@ let package = Package(
     ]
 )
 
-// MARK: - Engine backends (opt-in)
+// MARK: - MLX engine backends (opt-in, Mac-class)
 //
-// The four model adapters live in `Engines/` as ready-to-wire reference code.
-// Each pulls a heavy dependency, so they're opt-in — enable only what you use.
-// To turn one on: add its dependency below, declare its target, and move its
-// file from `Engines/` into `Sources/<Target>/`. Build on macOS 26 and verify
-// the SDK signatures against your resolved version.
+// Chatterbox (MIT, best-sounding) and Qwen3-TTS (Apache, multilingual) run on
+// MLX/GPU. Their adapters live in `Engines/` as ready-to-wire reference code
+// against mlx-audio-swift. To enable one: add the dependency, declare its
+// target, and move its file into `Sources/<Target>/`.
 //
-// Kokoro (CoreML/ANE, mobile) + PocketTTS (CoreML, mobile, cloning) — FluidAudio:
-//   dependencies += .package(url: "https://github.com/FluidInference/FluidAudio.git", from: "0.15.0")
-//   targets += .target(name: "KokoroTTS", dependencies: [
-//       "SpeechSynthesizer", .product(name: "FluidAudio", package: "FluidAudio")])
-//   targets += .target(name: "PocketTTS", dependencies: [
-//       "SpeechSynthesizer", .product(name: "FluidAudio", package: "FluidAudio")])
-//
-// Chatterbox (MLX/GPU, Mac) + Qwen3-TTS (MLX/GPU, Mac) — mlx-audio-swift:
 //   dependencies += .package(url: "https://github.com/Blaizzy/mlx-audio-swift.git", from: "1.0.0")
 //   targets += .target(name: "ChatterboxTTS", dependencies: [
 //       "SpeechSynthesizer", .product(name: "MLXAudioTTS", package: "mlx-audio-swift")])

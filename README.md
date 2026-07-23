@@ -6,16 +6,17 @@ Models are **downloaded on first use** and cached, so the app ships small and ev
 
 ## The models
 
-All four are curated to be **commercial-safe** (Apache-2.0 / MIT *weights*) and split by runtime tier:
+All are commercial-safe (Apple's system voices, or Apache-2.0 / MIT *weights*) and split by runtime tier:
 
-| Model | License | Runtime | Runs on iPhone? | Cloning | Best for |
-|---|---|---|---|---|---|
-| **Kokoro-82M** | Apache-2.0 | CoreML / ANE | ✅ | — | the fast, light default (9 langs, SSML) |
-| **PocketTTS** | MIT | CoreML | ✅ | ✅ | small + streaming + voice cloning on mobile |
-| **Chatterbox** | MIT | MLX / GPU | ❌ Mac | ✅ | best-sounding, emotion + 10s cloning |
-| **Qwen3-TTS** | Apache-2.0 | MLX / GPU | ❌ Mac | ✅ | multilingual, long-form |
+| Model | License | Runtime | Runs on iPhone? | Cloning | Status | Best for |
+|---|---|---|---|---|---|---|
+| **Apple (system)** | Apple (free to use) | System | ✅ | — | ✅ built-in | zero-config default & fallback, every device |
+| **Kokoro-82M** | Apache-2.0 | CoreML / ANE | ✅ | — | ✅ compiled target | fast, light (9 langs, SSML) |
+| **PocketTTS** | MIT | CoreML | ✅ | ✅ | ✅ compiled target | small + cloning on mobile |
+| **Chatterbox** | MIT | MLX / GPU | ❌ Mac | ✅ | 🔌 reference | best-sounding, emotion + 10s cloning |
+| **Qwen3-TTS** | Apache-2.0 | MLX / GPU | ❌ Mac | ✅ | 🔌 reference | multilingual, long-form |
 
-> **License hygiene:** only Apache/MIT-*weights* models are included. Restrictive models (Fish S2, F5-TTS, Higgs, XTTS) and Llama-licensed weights (Orpheus) are deliberately **not** supported.
+> **License hygiene:** only Apple's system voices and Apache/MIT-*weights* models are included. Restrictive models (Fish S2, F5-TTS, Higgs, XTTS) and Llama-licensed weights (Orpheus) are deliberately **not** supported.
 
 ## Architecture
 
@@ -37,31 +38,32 @@ func speak(_ text: String, with engine: some TTSEngine) async throws -> SpokenAu
 }
 ```
 
-## Enabling an engine (opt-in)
+## Using the engines
 
-The engine adapters live in `Engines/` as ready-to-wire reference code, kept out of the compiled build so the core has zero dependencies. Turn on only what you use:
-
-1. Add the dependency in `Package.swift` (templates are in the commented block there).
-2. Declare the target, e.g. for Kokoro:
-   ```swift
-   .target(name: "KokoroTTS", dependencies: [
-       "SpeechSynthesizer", .product(name: "FluidAudio", package: "FluidAudio")])
-   ```
-3. Move `Engines/KokoroEngine.swift` → `Sources/KokoroTTS/`.
-4. Build on macOS 26 and verify the SDK signatures against your resolved version.
-
+**Apple** (zero setup, in the core):
 ```swift
-import KokoroTTS
+import SpeechSynthesizer
+let engine = AppleEngine()
+let audio = try await engine.synthesize("Hello.")
+```
+
+**Kokoro / PocketTTS** (real products — just add this package and import):
+```swift
+import KokoroTTS   // or PocketTTS
 
 let engine = KokoroEngine()
-try await engine.prepare()
+try await engine.prepare { print("downloading… \(Int($0 * 100))%") }  // ~350 MB first run
 let audio = try await engine.synthesize("Hello from Kokoro.")
 ```
 
+**Chatterbox / Qwen3** (MLX, Mac-class) live in `Engines/` as reference adapters. To enable one: add mlx-audio-swift (templates are in the commented block in `Package.swift`), declare its target, move its file from `Engines/` into `Sources/`, and verify the SDK signatures.
+
 ## Status
 
-- ✅ **Core (`SpeechSynthesizer`) is built and unit-tested** — `SpokenAudio` WAV encoding, `TTSModel` metadata/licensing, `SynthesisOptions`, errors. Zero deps, runs anywhere.
-- 🔌 **Engine adapters are ready-to-wire reference implementations** written against FluidAudio's and mlx-audio-swift's documented APIs. They pull heavy SDKs and require on-device (ANE/GPU) model runs, so **verify signatures + confirm audio generation on a real device** when you enable one. The exact SDK type/method names are flagged inline in each `Engines/*.swift` file.
+- ✅ **Core (`SpeechSynthesizer`) — built + unit-tested (19 tests).** `SpokenAudio` WAV encode/decode, `TTSModel` metadata/licensing, `SynthesisOptions`, errors. Zero deps.
+- ✅ **AppleEngine — real, compiled, in the core.** Uses `AVSpeechSynthesizer`; no download, every device. (Its live render needs an app run loop, so it's guard-tested here and runs in-app.)
+- ✅ **KokoroTTS + PocketTTS — real, compiled targets** against **FluidAudio 0.15.2** (verified: correct actor API, WAV decode, `swift build` clean). First-run **synthesis downloads the model (~350 MB) from Hugging Face then runs on the ANE — confirm that live run on your machine** (the compile + wiring is done).
+- 🔌 **ChatterboxTTS + Qwen3-TTS — reference adapters in `Engines/`** against mlx-audio-swift's documented API. Enable + verify when you want the MLX/GPU (Mac-class) models.
 
 ## How model downloading works
 

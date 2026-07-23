@@ -25,6 +25,56 @@ public struct SpokenAudio: Sendable, Equatable {
         self.sampleRate = sampleRate
     }
 
+    /// Decode a 16-bit PCM WAV blob into `SpokenAudio`.
+    ///
+    /// Engines that emit WAV `Data` (e.g. FluidAudio's Kokoro/PocketTTS) route
+    /// through here so every engine yields the same sample type.
+    public init(wav data: Data) throws {
+        let bytes = [UInt8](data)
+        guard bytes.count >= 44,
+              bytes[0] == 0x52, bytes[1] == 0x49, bytes[2] == 0x46, bytes[3] == 0x46,   // "RIFF"
+              bytes[8] == 0x57, bytes[9] == 0x41, bytes[10] == 0x56, bytes[11] == 0x45  // "WAVE"
+        else { throw TTSError.synthesisFailed("not a WAV blob") }
+
+        func u32(_ i: Int) -> UInt32 { UInt32(bytes[i]) | UInt32(bytes[i+1]) << 8 | UInt32(bytes[i+2]) << 16 | UInt32(bytes[i+3]) << 24 }
+        func u16(_ i: Int) -> UInt16 { UInt16(bytes[i]) | UInt16(bytes[i+1]) << 8 }
+        func isID(_ i: Int, _ s: String) -> Bool { Array(s.utf8).enumerated().allSatisfy { bytes[i+$0.offset] == $0.element } }
+
+        var rate: Double = 24_000
+        var bits = 16
+        var dataStart = -1
+        var dataCount = 0
+
+        // Walk the chunks (fmt/data can be preceded by others).
+        var offset = 12
+        while offset + 8 <= bytes.count {
+            let size = Int(u32(offset + 4))
+            let body = offset + 8
+            if isID(offset, "fmt ") {
+                rate = Double(u32(body + 4))
+                bits = Int(u16(body + 14))
+            } else if isID(offset, "data") {
+                dataStart = body
+                dataCount = min(size, bytes.count - body)
+            }
+            offset = body + size + (size & 1)   // chunks are word-aligned
+        }
+
+        guard dataStart >= 0, bits == 16 else { throw TTSError.synthesisFailed("unsupported WAV format") }
+
+        var decoded = [Float]()
+        decoded.reserveCapacity(dataCount / 2)
+        var i = dataStart
+        let end = dataStart + dataCount - 1
+        while i < end {
+            let value = Int16(bitPattern: u16(i))
+            decoded.append(Float(value) / Float(Int16.max))
+            i += 2
+        }
+        self.samples = decoded
+        self.sampleRate = rate
+    }
+
     /// Duration in seconds.
     public var duration: TimeInterval {
         guard sampleRate > 0 else { return 0 }

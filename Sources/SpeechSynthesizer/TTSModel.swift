@@ -12,7 +12,11 @@ import Foundation
 /// A supported, commercial-safe on-device TTS model.
 public enum TTSModel: String, CaseIterable, Sendable {
 
-    /// Kokoro-82M — fast, light, 9 languages, SSML. The default. (Apache-2.0)
+    /// Apple's built-in system voices (`AVSpeechSynthesizer`) — zero download,
+    /// runs on every device, always available. The batteries-included default.
+    case apple
+
+    /// Kokoro-82M — fast, light, 9 languages, SSML. (Apache-2.0)
     case kokoro
 
     /// PocketTTS — small, streaming, voice cloning. (MIT)
@@ -27,6 +31,7 @@ public enum TTSModel: String, CaseIterable, Sendable {
     /// A human-readable name.
     public var displayName: String {
         switch self {
+        case .apple: "Apple (system)"
         case .kokoro: "Kokoro-82M"
         case .pocket: "PocketTTS"
         case .chatterbox: "Chatterbox"
@@ -37,6 +42,7 @@ public enum TTSModel: String, CaseIterable, Sendable {
     /// The model-weights license (all curated to permit commercial use).
     public var license: String {
         switch self {
+        case .apple: "Apple system (free to use)"
         case .kokoro, .qwen3: "Apache-2.0"
         case .pocket, .chatterbox: "MIT"
         }
@@ -45,6 +51,7 @@ public enum TTSModel: String, CaseIterable, Sendable {
     /// The runtime this model uses.
     public var runtime: TTSRuntime {
         switch self {
+        case .apple: .system
         case .kokoro, .pocket: .coreML
         case .chatterbox, .qwen3: .mlx
         }
@@ -53,7 +60,7 @@ public enum TTSModel: String, CaseIterable, Sendable {
     /// Whether the model is light enough to run on iPhone/iPad.
     public var runsOnMobile: Bool {
         switch self {
-        case .kokoro, .pocket: true
+        case .apple, .kokoro, .pocket: true
         case .chatterbox, .qwen3: false
         }
     }
@@ -62,16 +69,22 @@ public enum TTSModel: String, CaseIterable, Sendable {
     public var supportsVoiceCloning: Bool {
         switch self {
         case .pocket, .chatterbox, .qwen3: true
-        case .kokoro: false
+        case .apple, .kokoro: false
         }
     }
 
-    /// Every model here is curated to permit commercial use.
+    /// Every model here is usable in a commercial product.
     public var isCommercialUseAllowed: Bool { true }
 
+    /// Whether the model's weights must be downloaded on first use.
+    /// Apple's system voices are built in, so they don't.
+    public var requiresDownload: Bool { self != .apple }
+
     /// Rough on-disk size once downloaded, in megabytes (order-of-magnitude).
+    /// Zero for Apple's built-in voices.
     public var approximateSizeMB: Int {
         switch self {
+        case .apple: 0
         case .kokoro: 350
         case .pocket: 400
         case .chatterbox: 1_000
@@ -82,6 +95,9 @@ public enum TTSModel: String, CaseIterable, Sendable {
 
 /// The on-device runtime backing a model.
 public enum TTSRuntime: String, Sendable {
+
+    /// Apple's built-in system speech synthesizer.
+    case system = "System"
 
     /// CoreML on the Apple Neural Engine — low power, ideal for iPhone/iPad.
     case coreML = "CoreML/ANE"

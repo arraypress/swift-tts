@@ -54,22 +54,46 @@ final class SpeechSynthesizerTests: XCTestCase {
         XCTAssertEqual(second, -Int16.max)
     }
 
+    func testWav_encodeDecodeRoundTrips() throws {
+        let original = SpokenAudio(samples: [0, 0.5, -0.5, 0.999, -0.999], sampleRate: 24_000)
+        let decoded = try SpokenAudio(wav: original.wavData())
+        XCTAssertEqual(decoded.sampleRate, 24_000)
+        XCTAssertEqual(decoded.samples.count, original.samples.count)
+        for (a, b) in zip(decoded.samples, original.samples) {
+            XCTAssertEqual(a, b, accuracy: 1.0 / Float(Int16.max))   // 16-bit quantization
+        }
+    }
+
+    func testWav_decodeRejectsGarbage() {
+        XCTAssertThrowsError(try SpokenAudio(wav: Data([0, 1, 2, 3])))
+    }
+
     // MARK: - TTSModel metadata
 
     func testAllModels_areCommercialSafe() {
         for model in TTSModel.allCases {
             XCTAssertTrue(model.isCommercialUseAllowed, "\(model) should be commercial-safe")
+        }
+        // Downloadable models must carry permissive weights licenses.
+        for model in TTSModel.allCases where model.requiresDownload {
             XCTAssertTrue(["Apache-2.0", "MIT"].contains(model.license), "\(model) has non-permissive license")
         }
     }
 
-    func testRuntimeSplit_coreMLIsMobileMLXIsNot() {
+    func testRuntimeSplit_gpuIsNotMobile() {
         for model in TTSModel.allCases {
             switch model.runtime {
-            case .coreML: XCTAssertTrue(model.runsOnMobile, "\(model) is CoreML but not mobile")
-            case .mlx: XCTAssertFalse(model.runsOnMobile, "\(model) is MLX but marked mobile")
+            case .system, .coreML: XCTAssertTrue(model.runsOnMobile, "\(model) should run on mobile")
+            case .mlx: XCTAssertFalse(model.runsOnMobile, "\(model) is MLX/GPU but marked mobile")
             }
         }
+    }
+
+    func testApple_isZeroDownloadSystemEngine() {
+        XCTAssertEqual(TTSModel.apple.runtime, .system)
+        XCTAssertFalse(TTSModel.apple.requiresDownload)
+        XCTAssertEqual(TTSModel.apple.approximateSizeMB, 0)
+        XCTAssertTrue(TTSModel.apple.runsOnMobile)
     }
 
     func testKokoro_isDefaultTierNoCloning() {
@@ -98,6 +122,33 @@ final class SpeechSynthesizerTests: XCTestCase {
         XCTAssertEqual(options.language, "en-US")
         XCTAssertEqual(options.rate, 1.0)
         XCTAssertEqual(options.sampleRate, 24_000)
+    }
+
+    // MARK: - AppleEngine
+
+    func testAppleEngine_reportsAppleModelAndReady() async {
+        let engine = AppleEngine()
+        XCTAssertEqual(engine.model, .apple)
+        let ready = await engine.isReady
+        XCTAssertTrue(ready)
+    }
+
+    func testAppleEngine_emptyText_throwsEmptyText() async {
+        let engine = AppleEngine()
+        do {
+            _ = try await engine.synthesize("   \n")
+            XCTFail("expected emptyText")
+        } catch let error as TTSError {
+            XCTAssertEqual(error, .emptyText)
+        } catch {
+            XCTFail("unexpected error: \(error)")
+        }
+    }
+
+    func testAppleEngine_exposesSystemVoices() async throws {
+        let voices = try await AppleEngine().availableVoices()
+        XCTAssertFalse(voices.isEmpty, "system should expose at least one voice")
+        XCTAssertTrue(voices.allSatisfy { $0.model == .apple })
     }
 
     // MARK: - Errors
