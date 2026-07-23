@@ -22,6 +22,10 @@ public struct SynthesisOptions: Sendable {
     /// The desired output sample rate in hertz.
     public var sampleRate: Double
 
+    /// Reference audio to clone, for zero-shot cloning models (Chatterbox,
+    /// Qwen3 CustomVoice, PocketTTS). Ignored by models with built-in voices.
+    public var referenceAudio: SpokenAudio?
+
     /// Create synthesis options.
     ///
     /// - Parameters:
@@ -29,15 +33,18 @@ public struct SynthesisOptions: Sendable {
     ///   - language: BCP-47 language tag. Default `en-US`.
     ///   - rate: Speaking-rate multiplier (`1.0` = normal). Clamped `0.25...4.0`.
     ///   - sampleRate: Output sample rate in hertz. Default `24000`.
+    ///   - referenceAudio: Voice to clone, for cloning models.
     public init(
         voice: TTSVoice? = nil,
         language: String = "en-US",
         rate: Double = 1.0,
-        sampleRate: Double = 24_000
+        sampleRate: Double = 24_000,
+        referenceAudio: SpokenAudio? = nil
     ) {
         self.voice = voice
         self.language = language
         self.rate = min(4.0, max(0.25, rate))
         self.sampleRate = sampleRate
+        self.referenceAudio = referenceAudio
     }
 }

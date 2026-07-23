@@ -36,7 +36,16 @@ public final class MLXEngine: TTSEngine, @unchecked Sendable {
         self.repoID = repoID
     }
 
+    /// Kokoro-82M (Apache-2.0) via MLX/GPU — built-in voices, text-only, and
+    /// Kokoro's reference Misaki G2P (correct pronunciation, unlike the
+    /// CoreML/ANE variant whose small neural G2P mispronounces).
+    public static func kokoro(repoID: String = "mlx-community/Kokoro-82M-bf16") -> MLXEngine {
+        MLXEngine(model: .kokoro, repoID: repoID)
+    }
+
     /// Chatterbox (MIT) — best-sounding, emotion + voice cloning.
+    /// **Requires reference audio** (a zero-shot cloning model, no built-in
+    /// voice) — pass one via ``SynthesisOptions/referenceAudio``.
     public static func chatterbox(repoID: String = "mlx-community/Chatterbox-TTS-fp16") -> MLXEngine {
         MLXEngine(model: .chatterbox, repoID: repoID)
     }
@@ -65,10 +74,12 @@ public final class MLXEngine: TTSEngine, @unchecked Sendable {
         guard !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { throw TTSError.emptyText }
         guard let backend else { throw TTSError.notPrepared }
         do {
+            // Cloning models (Chatterbox, Qwen3 CustomVoice) need a reference clip.
+            let refAudio = options.referenceAudio.map { MLXArray($0.samples) }
             let audio = try await backend.generate(
                 text: text,
                 voice: options.voice?.id,
-                refAudio: nil,
+                refAudio: refAudio,
                 refText: nil,
                 language: options.language,
                 generationParameters: backend.defaultGenerationParameters
