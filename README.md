@@ -71,7 +71,7 @@ let audio = try await engine.synthesize("The best-sounding open model.")
 - ✅ **AppleEngine — real, compiled, in the core.** `AVSpeechSynthesizer`; no download, every device. (Live render needs an app run loop, so guard-tested here.)
 - ✅ **KokoroTTS — verified end-to-end.** Wraps **FluidAudio 0.15.2**; a live run downloaded the model (~197 MB) and produced real 24 kHz audio (2.88 s from a test sentence).
 - ✅ **PocketTTS — compiled** against FluidAudio 0.15.2 (same path as Kokoro; live run to confirm on your machine).
-- ✅ **MLXTTS (Chatterbox + Qwen3) — compiled** against **mlx-audio-swift** (MLX/GPU). One `MLXEngine` with `.chatterbox()` / `.qwen3()` factories over their shared `SpeechGenerationModel`. Live MLX inference (GB models) is the one bit left to confirm on-device.
+- ✅ **MLXTTS (Chatterbox + Qwen3) — compiled + model download verified** against **mlx-audio-swift** (MLX/GPU). One `MLXEngine` with `.chatterbox()` / `.qwen3()` over their shared `SpeechGenerationModel`. A live run downloaded Chatterbox (416 MB) and loaded it; **GPU inference needs an Xcode app build** (MLX-Swift's Metal library doesn't bundle in a bare `swift run` CLI — a known MLX-Swift limitation, works in-app).
 
 ## How model downloading works
 

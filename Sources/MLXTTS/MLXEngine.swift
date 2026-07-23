@@ -37,12 +37,12 @@ public final class MLXEngine: TTSEngine, @unchecked Sendable {
     }
 
     /// Chatterbox (MIT) — best-sounding, emotion + voice cloning.
-    public static func chatterbox(repoID: String = "mlx-community/chatterbox") -> MLXEngine {
+    public static func chatterbox(repoID: String = "mlx-community/Chatterbox-TTS-fp16") -> MLXEngine {
         MLXEngine(model: .chatterbox, repoID: repoID)
     }
 
     /// Qwen3-TTS (Apache-2.0) — multilingual, long-form.
-    public static func qwen3(repoID: String = "mlx-community/Qwen3-TTS") -> MLXEngine {
+    public static func qwen3(repoID: String = "mlx-community/Qwen3-TTS-12Hz-0.6B-Base-8bit") -> MLXEngine {
         MLXEngine(model: .qwen3, repoID: repoID)
     }
 
