@@ -74,9 +74,16 @@ final class SpeechSynthesizerTests: XCTestCase {
         for model in TTSModel.allCases {
             XCTAssertTrue(model.isCommercialUseAllowed, "\(model) should be commercial-safe")
         }
-        // Downloadable models must carry permissive weights licenses.
+        // Downloadable models carry either a permissive licence or, if not, must be flagged
+        // as restricted. The set is no longer uniformly Apache/MIT — Supertonic is OpenRAIL-M,
+        // which permits commercial use under conditions the others do not impose — so the
+        // invariant worth holding is that anything outside Apache/MIT *says so*.
         for model in TTSModel.allCases where model.requiresDownload {
-            XCTAssertTrue(["Apache-2.0", "MIT"].contains(model.license), "\(model) has non-permissive license")
+            let permissive = ["Apache-2.0", "MIT"].contains(model.license)
+            XCTAssertEqual(
+                permissive, !model.hasLicenseRestrictions,
+                "\(model) is \(model.license) — hasLicenseRestrictions must reflect that"
+            )
         }
     }
 
@@ -85,6 +92,7 @@ final class SpeechSynthesizerTests: XCTestCase {
             switch model.runtime {
             case .system, .coreML: XCTAssertTrue(model.runsOnMobile, "\(model) should run on mobile")
             case .mlx: XCTAssertFalse(model.runsOnMobile, "\(model) is MLX/GPU but marked mobile")
+            case .onnx: XCTAssertTrue(model.runsOnMobile, "\(model) is ONNX and light enough for mobile")
             }
         }
     }

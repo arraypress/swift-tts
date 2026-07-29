@@ -15,6 +15,7 @@ All are commercial-safe (Apple's system voices, or Apache-2.0 / MIT *weights*) a
 | **PocketTTS** | MIT | CoreML | ✅ | ✅ | ✅ compiled | small + cloning on mobile |
 | **Chatterbox** | MIT | MLX / GPU | ❌ Mac | ✅ | ✅ compiled | best-sounding, emotion + 10s cloning |
 | **Qwen3-TTS** | Apache-2.0 | MLX / GPU | ❌ Mac | ✅ | ✅ compiled | multilingual, long-form |
+| **Supertonic 3** | ⚠️ OpenRAIL-M | ONNX Runtime | ✅ | — | ✅ **verified** (live audio) | 31 languages on mobile, 11x real time |
 
 > **License hygiene:** only Apple's system voices and Apache/MIT-*weights* models are included. Restrictive models (Fish S2, F5-TTS, Higgs, XTTS) and Llama-licensed weights (Orpheus) are deliberately **not** supported.
 
@@ -24,6 +25,7 @@ All are commercial-safe (Apple's system voices, or Apache-2.0 / MIT *weights*) a
 - **Engine backends** — one adapter per model, each wrapping a real SDK:
   - Kokoro + PocketTTS → **[FluidAudio](https://github.com/FluidInference/FluidAudio)** (CoreML/ANE)
   - Chatterbox + Qwen3 → **[mlx-audio-swift](https://github.com/Blaizzy/mlx-audio-swift)** (MLX/GPU)
+  - Supertonic → **[ONNX Runtime](https://github.com/microsoft/onnxruntime-swift-package-manager)** (CPU)
 
 Program against `TTSEngine` and the models are interchangeable.
 
@@ -56,6 +58,19 @@ try await engine.prepare { print("downloading… \(Int($0 * 100))%") }  // ~350 
 let audio = try await engine.synthesize("Hello from Kokoro.")
 ```
 
+**Supertonic** (ONNX, 31 languages, mobile-class) — `import SupertonicTTS`:
+```swift
+import SupertonicTTS
+
+let engine = SupertonicEngine()             // downloads ~382 MB on first prepare()
+print(engine.pendingDownloadBytes)          // 0 once cached — ask before spending it
+try await engine.prepare { print($0) }
+let voices = try await engine.availableVoices()   // F1–F5, M1–M5
+var options = SynthesisOptions()
+options.voice = voices.first { $0.id == "M3" }
+let audio = try await engine.synthesize("Hello from Supertonic.", options: options)
+```
+
 **Chatterbox / Qwen3** (MLX, Mac-class) — `import MLXTTS`:
 ```swift
 import MLXTTS
@@ -71,7 +86,31 @@ let audio = try await engine.synthesize("The best-sounding open model.")
 - ✅ **AppleEngine — real, compiled, in the core.** `AVSpeechSynthesizer`; no download, every device. (Live render needs an app run loop, so guard-tested here.)
 - ✅ **KokoroTTS — verified end-to-end** (downloads + produces 24 kHz audio). ⚠️ **Pronunciation caveat:** FluidAudio 0.15.2's Kokoro uses a small *neural* G2P (not Kokoro's reference Misaki G2P) and mispronounces some words ("Hello" → "Hi hoy"). The audio path is correct (verified byte-identical to FluidAudio's raw output); the garbling is upstream in FluidAudio's G2P. Prefer PocketTTS for the CoreML tier until FluidAudio's Kokoro G2P improves.
 - ✅ **PocketTTS — verified, sounds correct.** FluidAudio 0.15.2; the recommended CoreML/mobile engine (MIT, cloning). Runs the same pipeline as Kokoro and sounds right.
+- ✅ **SupertonicTTS — verified end-to-end.** Cold install (382 MB) → 44.1 kHz audio, and the
+  output was transcribed back with Apple's speech recogniser to confirm it is intelligible
+  speech rather than plausible noise. 10 voices, verified to produce genuinely different audio.
+  French, Spanish and Korean all synthesise (Korean exercises the NFKD path the tokenizer needs).
+  **~11x real time** on an M3 Max; second run prepares in 0.30 s from cache.
 - ✅ **MLXTTS (Chatterbox + Qwen3) — compiled + model download verified** against **mlx-audio-swift** (MLX/GPU). One `MLXEngine` with `.chatterbox()` / `.qwen3()` over their shared `SpeechGenerationModel`. A live run downloaded Chatterbox (416 MB) and loaded it; **GPU inference needs an Xcode app build** (MLX-Swift's Metal library doesn't bundle in a bare `swift run` CLI — a known MLX-Swift limitation, works in-app).
+
+## Two things worth knowing about Supertonic
+
+**Its licence is not like the others.** The weights are **OpenRAIL-M**, not Apache/MIT — commercial
+use is permitted but carries use-based restrictions the other models do not impose. `TTSModel`
+exposes this as `hasLicenseRestrictions`, so an app can show the difference rather than flattening
+every model into "commercial use: yes". (The reference *code* is MIT; the *model* is not.)
+
+**It runs on the CPU provider deliberately.** ONNX Runtime's CoreML execution provider supports
+only part of these graphs — it split the vector estimator into ~134 partitions covering 702 of
+1032 nodes — so the run spends its time crossing between CoreML and CPU rather than computing:
+
+| provider | steps | session load | synthesis | speed |
+|---|---|---|---|---|
+| CPU | 4 | 0.28 s | 0.56 s | **11.4x** |
+| CoreML | 4 | 6.53 s | 1.08 s | 5.9x |
+
+Denoising steps default to **4**, also measured: 2 steps hits 20x real time but drops words, and
+8 or 16 cost 2–4x more for no gain in intelligibility.
 
 ## How model downloading works
 
