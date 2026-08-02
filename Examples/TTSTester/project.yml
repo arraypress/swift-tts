@@ -1,0 +1,61 @@
+name: TTSTester
+options:
+  bundleIdPrefix: com.arraypress
+  deploymentTarget:
+    macOS: "26.0"
+    iOS: "26.0"
+  createIntermediateGroups: true
+packages:
+  SpeechSynthesizer:
+    path: ../Libraries/swift-tts
+targets:
+  TTSTester:
+    type: application
+    platform: macOS
+    sources:
+      - Sources
+    dependencies:
+      - package: SpeechSynthesizer
+        product: SpeechSynthesizer
+      - package: SpeechSynthesizer
+        product: KokoroTTS
+      - package: SpeechSynthesizer
+        product: PocketTTS
+      - package: SpeechSynthesizer
+        product: MLXTTS
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.arraypress.ttstester
+        GENERATE_INFOPLIST_FILE: YES
+        MARKETING_VERSION: "1.0"
+        CURRENT_PROJECT_VERSION: "1"
+        SWIFT_VERSION: "6.0"
+        CODE_SIGN_IDENTITY: "-"
+        CODE_SIGNING_REQUIRED: NO
+        ENABLE_HARDENED_RUNTIME: NO
+        ENABLE_APP_SANDBOX: NO
+  TTSTester-iOS:
+    type: application
+    platform: iOS
+    sources:
+      - Sources
+    dependencies:
+      - package: SpeechSynthesizer
+        product: SpeechSynthesizer
+      - package: SpeechSynthesizer
+        product: KokoroTTS
+      - package: SpeechSynthesizer
+        product: PocketTTS
+      - package: SpeechSynthesizer
+        product: MLXTTS
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.arraypress.ttstester
+        GENERATE_INFOPLIST_FILE: YES
+        MARKETING_VERSION: "1.0"
+        CURRENT_PROJECT_VERSION: "1"
+        SWIFT_VERSION: "6.0"
+        TARGETED_DEVICE_FAMILY: "1,2"
+        CODE_SIGN_STYLE: Automatic
+        INFOPLIST_KEY_UILaunchScreen_Generation: YES
+        INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents: YES
