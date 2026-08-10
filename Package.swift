@@ -22,7 +22,11 @@ let package = Package(
     ],
     dependencies: [
         .package(url: "https://github.com/FluidInference/FluidAudio.git", exact: "0.15.2"),
-        .package(url: "https://github.com/Blaizzy/mlx-audio-swift.git", branch: "main"),
+        // Pinned to a tag rather than a branch. SwiftPM refuses to let a
+        // stable-versioned package depend on an unstable one, so a branch
+        // requirement here makes this package impossible to release —
+        // consumers cannot depend on it by version at all.
+        .package(url: "https://github.com/Blaizzy/mlx-audio-swift.git", from: "0.1.3"),
         .package(url: "https://github.com/ml-explore/mlx-swift.git", .upToNextMajor(from: "0.30.6")),
         .package(url: "https://github.com/microsoft/onnxruntime-swift-package-manager.git", from: "1.16.0"),
     ],
