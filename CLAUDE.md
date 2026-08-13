@@ -50,10 +50,13 @@ same transcriber, which got all three right — so it is the synthesis, not the
 transcriber. "Hello" now comes back correctly, so the old "Hi hoy" example is
 out of date, but the underlying G2P defect is not.
 
-**This disqualifies Kokoro for vocabulary work** (Band9), where the
-pronunciation is the product. PocketTTS remains the CoreML tier to prefer. FluidAudio 0.15.2's Kokoro uses a small *neural* G2P (55 graphemes, derived from `laishere/kokoro-coreml`), **not** Kokoro's reference Misaki G2P.
+**Why:** FluidAudio's Kokoro uses a small *neural* G2P (55 graphemes, derived
+from `laishere/kokoro-coreml`), **not** Kokoro's reference Misaki G2P. Proven
+upstream twice over: `SpokenAudio` decode is byte-identical to FluidAudio's raw
+WAV, and PocketTTS through the same pipeline sounds fine.
 
-Proven upstream, twice over: `SpokenAudio` decode is byte-identical to FluidAudio's raw WAV, and PocketTTS through the same pipeline sounds fine. **Prefer PocketTTS for the CoreML tier.**
+**This disqualifies Kokoro for vocabulary work** (Band9), where the
+pronunciation *is* the product. **Prefer PocketTTS for the CoreML tier.**
 
 **If it ever needs fixing rather than avoiding:** other Kokoro ports use the reference **Misaki** G2P and wouldn't have this problem — `mweinbach/kokoro-swift` (Swift; runs on MLX/GPU *or* Core ML/ANE, Misaki G2P → phonemes → 24 kHz, on-demand voice download) and `mattmireles/kokoro-coreml` (PyTorch→Core ML, 12–79× realtime, no Python at inference). Kokoro's pipeline is text → G2P → 3 non-autoregressive Core ML stages → 24 kHz, with no sampling loop, so swapping the G2P front-end is the tractable fix.
 
