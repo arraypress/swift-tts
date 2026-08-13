@@ -74,4 +74,37 @@ public actor KokoroEngine: TTSEngine {
             throw TTSError.synthesisFailed(String(describing: error))
         }
     }
+
+    /// Speaks IPA directly, skipping the grapheme-to-phoneme step.
+    ///
+    /// The reason to want this is ``KokoroPhonemes``: the G2P in front of this
+    /// model is the part that gets words wrong, and everything behind it is
+    /// sound. Supplying phonemes yourself is how you pronounce a name, a
+    /// loanword, or one of the words this G2P simply fails.
+    ///
+    /// The string is checked against the model's vocabulary first, because the
+    /// encoder drops what it does not recognise without saying so.
+    public func synthesize(
+        phonemes: String, options: SynthesisOptions
+    ) async throws -> SpokenAudio {
+        guard prepared else { throw TTSError.notPrepared }
+        try KokoroPhonemes.validate(phonemes)
+
+        if let voice = options.voice?.id, voice != "af_heart" {
+            try await KokoroVoicePacks.ensure(voice, in: KokoroVoicePacks.cacheDirectory)
+        }
+
+        do {
+            let wav = try await manager.synthesizeFromPhonemes(
+                phonemes.trimmingCharacters(in: .whitespacesAndNewlines),
+                voice: options.voice?.id,
+                speed: Float(options.rate)
+            )
+            return try SpokenAudio(wav: wav)
+        } catch let error as TTSError {
+            throw error
+        } catch {
+            throw TTSError.synthesisFailed(String(describing: error))
+        }
+    }
 }

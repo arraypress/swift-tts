@@ -43,22 +43,62 @@ headers. `torch.save` writes streaming with the data-descriptor flag (`0x0808`)
 set, so every local header's size field is **zero**; a forward walk steps zero
 bytes and lands mid-payload.
 
-**Pronunciation — still broken, measured.** 12 real Band9 vocabulary words
-synthesised and transcribed back: 7 right, 4 wrong. `turmoil` → "terminal",
-`bust` → "burstit", `weak` → "awake". Controlled against PocketTTS through the
-same transcriber, which got all three right — so it is the synthesis, not the
-transcriber. "Hello" now comes back correctly, so the old "Hi hoy" example is
-out of date, but the underlying G2P defect is not.
+**Pronunciation — broken, and worse than "vocabulary work".** The text path
+mangles **`is`**, every time, into "ice". Feed it three ordinary sentences and
+the damage spreads to the words either side:
+
+```
+"This is a test. That is the plan. It is fine."
+ → "Thighs ice attest that ice the planet ice fine."
+```
+
+Measured against the phoneme path with a carrier sentence, eight words each,
+transcribed back with `transcribe`:
+
+| | target word | carrier "is" |
+|---|---|---|
+| text (G2P) | 5/8 | **0/8** |
+| phonemes (bypass) | 8/8 | 8/8 |
+
+`colonel` scores as a phoneme-path miss only because it came back spelled
+"kernel", which is the same word out loud — the audio was right.
+
+Do not test this with isolated single words. A one-second clip of "weak"
+transcribes as "weekend" on a *correct* rendering; the carrier sentence is what
+makes the instrument trustworthy.
 
 **Why:** FluidAudio's Kokoro uses a small *neural* G2P (55 graphemes, derived
 from `laishere/kokoro-coreml`), **not** Kokoro's reference Misaki G2P. Proven
 upstream twice over: `SpokenAudio` decode is byte-identical to FluidAudio's raw
 WAV, and PocketTTS through the same pipeline sounds fine.
 
-**This disqualifies Kokoro for vocabulary work** (Band9), where the
-pronunciation *is* the product. **Prefer PocketTTS for the CoreML tier.**
+**This disqualifies Kokoro's *text* path outright** — not just for vocabulary
+work, for prose. **Prefer PocketTTS for the CoreML tier.**
 
-**If it ever needs fixing rather than avoiding:** other Kokoro ports use the reference **Misaki** G2P and wouldn't have this problem — `mweinbach/kokoro-swift` (Swift; runs on MLX/GPU *or* Core ML/ANE, Misaki G2P → phonemes → 24 kHz, on-demand voice download) and `mattmireles/kokoro-coreml` (PyTorch→Core ML, 12–79× realtime, no Python at inference). Kokoro's pipeline is text → G2P → 3 non-autoregressive Core ML stages → 24 kHz, with no sampling loop, so swapping the G2P front-end is the tractable fix.
+## The phoneme bypass works — proven, and shipped
+
+`KokoroEngine.synthesize(phonemes:options:)` hands espeak-flavoured IPA
+straight to `KokoroAneManager.synthesizeFromPhonemes`, skipping the G2P. That
+is the 8/8 column above: the three CoreML stages behind the G2P are sound, and
+this reaches them. `speak --engine kokoro --phonemes "ðə wˈɜːd ɪz tˈɜːmɔɪl."`
+
+`KokoroPhonemes.validate` checks the string against the model's own
+`vocab.json` (114 single-character symbols) **before** synthesis, because the
+encoder's reference behaviour is to *silently drop* what it does not recognise
+— mid-word, no error. An unchecked stray symbol is a plausible mispronunciation
+you never learn about, which is the exact failure this feature exists to
+escape.
+
+**What is still missing is a G2P to feed it.** Hand-written IPA proves the
+pipeline; it does not make a usable tool, and Band9's word data has no `ipa`
+field. Options, in order of appetite: ship a CMUdict-style lookup table with
+letter-to-sound fallback; port **Misaki** (Kokoro's reference G2P); or lift the
+front end from `mweinbach/kokoro-swift`, which already does Misaki in Swift.
+Until one exists, the honest recommendation stays **PocketTTS**.
+
+`g2ptest` under scratchpad is dead — it failed with a CoreML MIL error and I
+briefly took that for a platform limit. It was not: `speak` loads the same
+models from a plain SwiftPM binary and always did. Test through the CLI.
 
 ## Gotchas
 - **Both FluidAudio and mlx-audio-swift export their own `TTSError`.** Engines must `typealias TTSError = SpeechSynthesizer.TTSError` or the ambiguity breaks the build.
