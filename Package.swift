@@ -65,6 +65,10 @@ let package = Package(
             ]
         ),
         .testTarget(
+            name: "KokoroTTSTests",
+            dependencies: ["KokoroTTS"]
+        ),
+        .testTarget(
             name: "SpeechSynthesizerTests",
             dependencies: ["SpeechSynthesizer"]
         ),

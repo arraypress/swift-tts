@@ -39,20 +39,28 @@ public actor KokoroEngine: TTSEngine {
         onProgress?(1.0)
     }
 
+    /// Every English voice Kokoro-82M was trained with.
+    ///
+    /// All of them work. The list used to be five, four of which answered a
+    /// 404 at synthesis — the converted model repository ships only
+    /// `af_heart`, and the rest are fetched from the original on first use.
+    /// See ``KokoroVoicePacks``.
     public func availableVoices() async throws -> [TTSVoice] {
-        // Kokoro ships fixed voice packs (no cloning). A representative subset.
-        [
-            TTSVoice(id: "af_heart",  name: "Heart (US, female)", language: "en-US", model: .kokoro),
-            TTSVoice(id: "af_bella",  name: "Bella (US, female)", language: "en-US", model: .kokoro),
-            TTSVoice(id: "am_adam",   name: "Adam (US, male)",    language: "en-US", model: .kokoro),
-            TTSVoice(id: "bf_emma",   name: "Emma (UK, female)",  language: "en-GB", model: .kokoro),
-            TTSVoice(id: "bm_george", name: "George (UK, male)",  language: "en-GB", model: .kokoro),
-        ]
+        KokoroVoices.voices()
     }
 
     public func synthesize(_ text: String, options: SynthesisOptions) async throws -> SpokenAudio {
         guard !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { throw TTSError.emptyText }
         guard prepared else { throw TTSError.notPrepared }
+
+        // The pack has to be on disk before the engine reaches for it. Only
+        // `af_heart` ships with the converted model; anything else is fetched
+        // once and cached. Doing it here rather than in prepare() means a run
+        // downloads the one voice it asked for, not fifty-four.
+        if let voice = options.voice?.id, voice != "af_heart" {
+            try await KokoroVoicePacks.ensure(voice, in: KokoroVoicePacks.cacheDirectory)
+        }
+
         do {
             let wav = try await manager.synthesize(
                 text: text,

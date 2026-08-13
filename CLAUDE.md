@@ -24,13 +24,34 @@ Both flags are required — mlx-swift ships a CudaBuild plugin that otherwise fa
 |---|---|---|
 | `AppleEngine` | `AVSpeechSynthesizer` | Real, compiled, zero download. Live render needs an app run loop (**hangs headless**) → guard-tested only. |
 | `PocketTTS` | FluidAudio | ✅ **Verified — sounds correct** in the tester. The recommended CoreML/mobile engine. |
-| `KokoroTTS` | FluidAudio | Works but **mispronounces** — see below. |
+| `KokoroTTS` | FluidAudio | All 28 English voices work. Still **mispronounces** — see below. |
 | `MLXTTS` (Chatterbox) | mlx-audio-swift | Compiles; downloaded (416 MB) + loaded live. GPU inference pending an Xcode app run. |
 | `MLXTTS` (Qwen3) | mlx-audio-swift | Compiles; live GPU test pending. |
 
-## Kokoro mispronounces — it's upstream, don't debug it here
+## Kokoro: all 28 voices now, but it still mispronounces
 
-Kokoro says "Hi hoy" for "Hello". FluidAudio 0.15.2's Kokoro uses a small *neural* G2P (55 graphemes, derived from `laishere/kokoro-coreml`), **not** Kokoro's reference Misaki G2P.
+**Voices — fixed.** The converted repo (`FluidInference/kokoro-82m-coreml`) ships
+exactly one English pack, `ANE/af_heart.bin`. The engine listed five and four of
+them answered a 404 *at synthesis*, after the caller had chosen one. The other
+packs are in the original `hexgrad/Kokoro-82M` as `voices/<id>.pt`, and the
+tensor inside is byte-identical to what the engine wants: 510 × 256 LE float32,
+522,240 bytes. `KokoroVoicePacks` fetches and caches on first use — no PyTorch,
+no Python.
+
+Read the archive through its **central directory**, not by walking local
+headers. `torch.save` writes streaming with the data-descriptor flag (`0x0808`)
+set, so every local header's size field is **zero**; a forward walk steps zero
+bytes and lands mid-payload.
+
+**Pronunciation — still broken, measured.** 12 real Band9 vocabulary words
+synthesised and transcribed back: 7 right, 4 wrong. `turmoil` → "terminal",
+`bust` → "burstit", `weak` → "awake". Controlled against PocketTTS through the
+same transcriber, which got all three right — so it is the synthesis, not the
+transcriber. "Hello" now comes back correctly, so the old "Hi hoy" example is
+out of date, but the underlying G2P defect is not.
+
+**This disqualifies Kokoro for vocabulary work** (Band9), where the
+pronunciation is the product. PocketTTS remains the CoreML tier to prefer. FluidAudio 0.15.2's Kokoro uses a small *neural* G2P (55 graphemes, derived from `laishere/kokoro-coreml`), **not** Kokoro's reference Misaki G2P.
 
 Proven upstream, twice over: `SpokenAudio` decode is byte-identical to FluidAudio's raw WAV, and PocketTTS through the same pipeline sounds fine. **Prefer PocketTTS for the CoreML tier.**
 
