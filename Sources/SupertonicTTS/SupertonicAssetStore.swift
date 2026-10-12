@@ -36,7 +36,11 @@ public struct SupertonicAssetStore: Sendable {
         Asset(path: "voice_styles/\($0).json", bytes: 292_046)
     }
 
-    private static let remote = URL(string: "https://huggingface.co/Supertone/supertonic-3/resolve/main")!
+    /// An unmodified mirror of Supertone/supertonic-3 (OpenRAIL-M, use restrictions
+    /// passed on in its card) under arraypress, pinned to the commit verified against
+    /// Supertone's published hashes. It used to follow Supertone's `main`, which could
+    /// change under the tools.
+    private static let remote = URL(string: "https://huggingface.co/arraypress/tts-supertonic-3/resolve/bbb561d2936ad3a745ed91c3aaa588ec1e4a1af9")!
 
     /// Where assets are cached.
     ///

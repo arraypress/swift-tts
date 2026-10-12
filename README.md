@@ -62,7 +62,7 @@ let audio = try await engine.synthesize("Hello from Kokoro.")
 ```swift
 import SupertonicTTS
 
-let engine = SupertonicEngine()             // downloads ~382 MB on first prepare()
+let engine = SupertonicEngine()             // downloads ~382 MB on first prepare(), from arraypress/tts-supertonic-3
 print(engine.pendingDownloadBytes)          // 0 once cached — ask before spending it
 try await engine.prepare { print($0) }
 let voices = try await engine.availableVoices()   // F1–F5, M1–M5
@@ -92,6 +92,12 @@ let audio = try await engine.synthesize("The best-sounding open model.")
   French, Spanish and Korean all synthesise (Korean exercises the NFKD path the tokenizer needs).
   **~11x real time** on an M3 Max; second run prepares in 0.30 s from cache.
 - ✅ **MLXTTS (Chatterbox + Qwen3) — compiled + model download verified** against **mlx-audio-swift** (MLX/GPU). One `MLXEngine` with `.chatterbox()` / `.qwen3()` over their shared `SpeechGenerationModel`. A live run downloaded Chatterbox (416 MB) and loaded it; **GPU inference needs an Xcode app build** (MLX-Swift's Metal library doesn't bundle in a bare `swift run` CLI — a known MLX-Swift limitation, works in-app).
+
+**Where the weights come from (1.3.0).** An unmodified mirror,
+[arraypress/tts-supertonic-3](https://huggingface.co/arraypress/tts-supertonic-3), of
+Supertone/supertonic-3 at commit `3cadd1ee`, every file checked against Supertone's published
+hashes and pinned by commit. It used to follow Supertone's own `main`, which could change under the
+tools. OpenRAIL-M: the licence's use restrictions (Attachment A) apply to anyone using the voice.
 
 ## Two things worth knowing about Supertonic
 
