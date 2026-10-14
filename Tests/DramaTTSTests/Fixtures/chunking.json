@@ -1,0 +1,101 @@
+{
+ "split": {
+  "short": [
+   "Hello there."
+  ],
+  "long": [
+   "The train to Edinburgh is running about twenty minutes late, so grab a coffee and settle in. The train to Edinburgh is running about twenty minutes late, so grab a coffee and settle in. The train to Edinburgh is running about twenty minutes late, so grab a coffee and settle in.",
+   "The train to Edinburgh is running about twenty minutes late, so grab a coffee and settle in. Pi is 3.14159, roughly; the platform is 2.5 metres wide! Are you sure? Yes."
+  ],
+  "crlf": [
+   "First line of a very long letter that goes on and on.\r\nSecond line, which is also rather long and wordy indeed.\r\nFirst line of a very long letter that goes on and on.\r\nSecond line, which is also rather long and wordy indeed.\r\nFirst line of a very long letter that goes on and on.",
+   "Second line, which is also rather long and wordy indeed.\r\nFirst line of a very long letter that goes on and on.\r\nSecond line, which is also rather long and wordy indeed."
+  ],
+  "cues": [
+   "[whispering] Don't tell anyone, but I ate the last slice of cake. [laughs] It was worth it. Don't tell anyone, but I ate the last slice of cake. [laughs] It was worth it. Don't tell anyone, but I ate the last slice of cake. [laughs] It was worth it.",
+   "Don't tell anyone, but I ate the last slice of cake. [laughs] It was worth it. Don't tell anyone, but I ate the last slice of cake. [laughs] It was worth it."
+  ],
+  "paired": [
+   "<whisper>quiet words that must not be cut apart quiet words that must not be cut apart quiet words that must not be cut apart quiet words that must not be cut apart quiet words that must not be cut apart quiet words that must not be cut apart quiet words that must not be cut apart quiet words that must not be cut apart quiet words that must not be cut apart </whisper>",
+   "And then loud again. </whisper> And then loud again."
+  ],
+  "speakers": [
+   "<|speaker:0|>  Are you coming to the party tonight? Are you coming to the party tonight? Are you coming to the party tonight? \n<|speaker:1|>  [sighs] I'd love to, but I'm exhausted. \n<|speaker:2|>  Me too! ",
+   "<|speaker:3|>  Not me. \n<|speaker:0|>  Fine."
+  ],
+  "cjk": [
+   "今天天气很好。我们去公园散步吧！今天天气很好。我们去公园散步吧！今天天气很好。我们去公园散步吧！今天天气很好。我们去公园散步吧！今天天气很好。我们去公园散步吧！今天天气很好。我们去公园散步吧！",
+   "今天天气很好。我们去公园散步吧！今天天气很好。我们去公园散步吧！今天天气很好。我们去公园散步吧！今天天气很好。我们去公园散步吧！今天天气很好。我们去公园散步吧！今天天气很好。我们去公园散步吧！"
+  ],
+  "nospace": [
+   "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+   "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+   "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+  ],
+  "edges": [
+   "    Spaces around a sentence.　 "
+  ],
+  "longcue": [
+   "[a very long stage direction a very long stage direction a very long stage direction a very long stage direction a very long stage direction a very long stage direction a very long stage direction a very long stage direction a very long stage direction a very long stage direction a very long stage direction a very long stage direction a very long stage direction a very long stage direction a very long stage direction ]",
+   "Then speech."
+  ],
+  "tagged_lead": [
+   "<|speaker:5|>  hello"
+  ],
+  "untagged_mid": [
+   "<|speaker:0|> Before. \n<|speaker:2|>  After."
+  ]
+ },
+ "inputs": {
+  "short": "Hello there.",
+  "long": "The train to Edinburgh is running about twenty minutes late, so grab a coffee and settle in. The train to Edinburgh is running about twenty minutes late, so grab a coffee and settle in. The train to Edinburgh is running about twenty minutes late, so grab a coffee and settle in. The train to Edinburgh is running about twenty minutes late, so grab a coffee and settle in. Pi is 3.14159, roughly; the platform is 2.5 metres wide! Are you sure? Yes.",
+  "crlf": "First line of a very long letter that goes on and on.\r\nSecond line, which is also rather long and wordy indeed.\r\nFirst line of a very long letter that goes on and on.\r\nSecond line, which is also rather long and wordy indeed.\r\nFirst line of a very long letter that goes on and on.\r\nSecond line, which is also rather long and wordy indeed.\r\nFirst line of a very long letter that goes on and on.\r\nSecond line, which is also rather long and wordy indeed.\r\n",
+  "cues": "[whispering] Don't tell anyone, but I ate the last slice of cake. [laughs] It was worth it. Don't tell anyone, but I ate the last slice of cake. [laughs] It was worth it. Don't tell anyone, but I ate the last slice of cake. [laughs] It was worth it. Don't tell anyone, but I ate the last slice of cake. [laughs] It was worth it. Don't tell anyone, but I ate the last slice of cake. [laughs] It was worth it. ",
+  "paired": "<whisper>quiet words that must not be cut apart quiet words that must not be cut apart quiet words that must not be cut apart quiet words that must not be cut apart quiet words that must not be cut apart quiet words that must not be cut apart quiet words that must not be cut apart quiet words that must not be cut apart quiet words that must not be cut apart </whisper> And then loud again. </whisper> And then loud again. ",
+  "speakers": "<|speaker:0|> Are you coming to the party tonight? Are you coming to the party tonight? Are you coming to the party tonight? <|speaker:1|> [sighs] I'd love to, but I'm exhausted. <|speaker:2|> Me too! <|speaker:3|> Not me. <|speaker:0|> Fine.",
+  "cjk": "今天天气很好。我们去公园散步吧！今天天气很好。我们去公园散步吧！今天天气很好。我们去公园散步吧！今天天气很好。我们去公园散步吧！今天天气很好。我们去公园散步吧！今天天气很好。我们去公园散步吧！今天天气很好。我们去公园散步吧！今天天气很好。我们去公园散步吧！今天天气很好。我们去公园散步吧！今天天气很好。我们去公园散步吧！今天天气很好。我们去公园散步吧！今天天气很好。我们去公园散步吧！",
+  "nospace": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+  "edges": "    Spaces around a sentence.　 ",
+  "longcue": "[a very long stage direction a very long stage direction a very long stage direction a very long stage direction a very long stage direction a very long stage direction a very long stage direction a very long stage direction a very long stage direction a very long stage direction a very long stage direction a very long stage direction a very long stage direction a very long stage direction a very long stage direction ] Then speech.",
+  "tagged_lead": "  <|speaker:5|> hello",
+  "untagged_mid": "Before. <|speaker:2|> After."
+ },
+ "tag": {
+  "short": "<|speaker:0|> Hello there.",
+  "long": "<|speaker:0|> The train to Edinburgh is running about twenty minutes late, so grab a coffee and settle in. The train to Edinburgh is running about twenty minutes late, so grab a coffee and settle in. The train to Edinburgh is running about twenty minutes late, so grab a coffee and settle in. The train to Edinburgh is running about twenty minutes late, so grab a coffee and settle in. Pi is 3.14159, roughly; the platform is 2.5 metres wide! Are you sure? Yes.",
+  "crlf": "<|speaker:0|> First line of a very long letter that goes on and on.\r\nSecond line, which is also rather long and wordy indeed.\r\nFirst line of a very long letter that goes on and on.\r\nSecond line, which is also rather long and wordy indeed.\r\nFirst line of a very long letter that goes on and on.\r\nSecond line, which is also rather long and wordy indeed.\r\nFirst line of a very long letter that goes on and on.\r\nSecond line, which is also rather long and wordy indeed.\r\n",
+  "cues": "<|speaker:0|> [whispering] Don't tell anyone, but I ate the last slice of cake. [laughs] It was worth it. Don't tell anyone, but I ate the last slice of cake. [laughs] It was worth it. Don't tell anyone, but I ate the last slice of cake. [laughs] It was worth it. Don't tell anyone, but I ate the last slice of cake. [laughs] It was worth it. Don't tell anyone, but I ate the last slice of cake. [laughs] It was worth it. ",
+  "paired": "<|speaker:0|> <whisper>quiet words that must not be cut apart quiet words that must not be cut apart quiet words that must not be cut apart quiet words that must not be cut apart quiet words that must not be cut apart quiet words that must not be cut apart quiet words that must not be cut apart quiet words that must not be cut apart quiet words that must not be cut apart </whisper> And then loud again. </whisper> And then loud again. ",
+  "speakers": "<|speaker:0|> Are you coming to the party tonight? Are you coming to the party tonight? Are you coming to the party tonight? <|speaker:1|> [sighs] I'd love to, but I'm exhausted. <|speaker:2|> Me too! <|speaker:3|> Not me. <|speaker:0|> Fine.",
+  "cjk": "<|speaker:0|> 今天天气很好。我们去公园散步吧！今天天气很好。我们去公园散步吧！今天天气很好。我们去公园散步吧！今天天气很好。我们去公园散步吧！今天天气很好。我们去公园散步吧！今天天气很好。我们去公园散步吧！今天天气很好。我们去公园散步吧！今天天气很好。我们去公园散步吧！今天天气很好。我们去公园散步吧！今天天气很好。我们去公园散步吧！今天天气很好。我们去公园散步吧！今天天气很好。我们去公园散步吧！",
+  "nospace": "<|speaker:0|> xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+  "edges": "<|speaker:0|>     Spaces around a sentence.　 ",
+  "longcue": "<|speaker:0|> [a very long stage direction a very long stage direction a very long stage direction a very long stage direction a very long stage direction a very long stage direction a very long stage direction a very long stage direction a very long stage direction a very long stage direction a very long stage direction a very long stage direction a very long stage direction a very long stage direction a very long stage direction ] Then speech.",
+  "tagged_lead": "  <|speaker:5|> hello",
+  "untagged_mid": "<|speaker:0|> Before. <|speaker:2|> After."
+ },
+ "reference": {
+  "short": "<|speaker:0|> Hello there.",
+  "long": "<|speaker:0|> The train to Edinburgh is running about twenty minutes late, so grab a coffee and settle in. The train to Edinburgh is running about twenty minutes late, so grab a coffee and settle in. The train to Edinburgh is running about twenty minutes late, so grab a coffee and settle in. The train to Edinburgh is running about twenty minutes late, so grab a coffee and settle in. Pi is 3.14159, roughly; the platform is 2.5 metres wide! Are you sure? Yes.",
+  "crlf": "<|speaker:0|> First line of a very long letter that goes on and on.\r\nSecond line, which is also rather long and wordy indeed.\r\nFirst line of a very long letter that goes on and on.\r\nSecond line, which is also rather long and wordy indeed.\r\nFirst line of a very long letter that goes on and on.\r\nSecond line, which is also rather long and wordy indeed.\r\nFirst line of a very long letter that goes on and on.\r\nSecond line, which is also rather long and wordy indeed.\r\n",
+  "cues": "<|speaker:0|> [whispering] Don't tell anyone, but I ate the last slice of cake. [laughs] It was worth it. Don't tell anyone, but I ate the last slice of cake. [laughs] It was worth it. Don't tell anyone, but I ate the last slice of cake. [laughs] It was worth it. Don't tell anyone, but I ate the last slice of cake. [laughs] It was worth it. Don't tell anyone, but I ate the last slice of cake. [laughs] It was worth it. ",
+  "paired": "<|speaker:0|> <whisper>quiet words that must not be cut apart quiet words that must not be cut apart quiet words that must not be cut apart quiet words that must not be cut apart quiet words that must not be cut apart quiet words that must not be cut apart quiet words that must not be cut apart quiet words that must not be cut apart quiet words that must not be cut apart </whisper> And then loud again. </whisper> And then loud again. ",
+  "speakers": "<|speaker:0|> Are you coming to the party tonight? Are you coming to the party tonight? Are you coming to the party tonight? <|speaker:1|> [sighs] I'd love to, but I'm exhausted. <|speaker:2|> Me too! <|speaker:3|> Not me. <|speaker:0|> Fine.",
+  "cjk": "<|speaker:0|> 今天天气很好。我们去公园散步吧！今天天气很好。我们去公园散步吧！今天天气很好。我们去公园散步吧！今天天气很好。我们去公园散步吧！今天天气很好。我们去公园散步吧！今天天气很好。我们去公园散步吧！今天天气很好。我们去公园散步吧！今天天气很好。我们去公园散步吧！今天天气很好。我们去公园散步吧！今天天气很好。我们去公园散步吧！今天天气很好。我们去公园散步吧！今天天气很好。我们去公园散步吧！",
+  "nospace": "<|speaker:0|> xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+  "edges": "<|speaker:0|>     Spaces around a sentence.　 ",
+  "longcue": "<|speaker:0|> [a very long stage direction a very long stage direction a very long stage direction a very long stage direction a very long stage direction a very long stage direction a very long stage direction a very long stage direction a very long stage direction a very long stage direction a very long stage direction a very long stage direction a very long stage direction a very long stage direction a very long stage direction ] Then speech.",
+  "tagged_lead": "<|speaker:5|>   hello",
+  "untagged_mid": "<|speaker:0|> Before. <|speaker:2|> After."
+ },
+ "validate": {
+  "": "text: text is empty",
+  "   ": "text: text is empty",
+  "hi <|im_end|>": "text: text must not contain <|im_end|>",
+  "x <|speaker:16|> y": "text: speaker tags run from <|speaker:0|> to <|speaker:15|>",
+  "x <|speaker:07|> y": "text: speaker tags run from <|speaker:0|> to <|speaker:15|>",
+  "x <|speaker|> y": "text: speaker tags run from <|speaker:0|> to <|speaker:15|>",
+  "<|semantic:5|>": "text: text must not contain <|semantic:",
+  "ok <|speaker:15|> fine": null
+ }
+}

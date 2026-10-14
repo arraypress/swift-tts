@@ -26,6 +26,10 @@ public struct SynthesisOptions: Sendable {
     /// Qwen3 CustomVoice, PocketTTS). Ignored by models with built-in voices.
     public var referenceAudio: SpokenAudio?
 
+    /// What is said in ``referenceAudio``, word for word — Drama 3 clones from
+    /// a clip *and* its transcript. Ignored by the other models.
+    public var referenceTranscript: String?
+
     /// Create synthesis options.
     ///
     /// - Parameters:
@@ -34,17 +38,20 @@ public struct SynthesisOptions: Sendable {
     ///   - rate: Speaking-rate multiplier (`1.0` = normal). Clamped `0.25...4.0`.
     ///   - sampleRate: Output sample rate in hertz. Default `24000`.
     ///   - referenceAudio: Voice to clone, for cloning models.
+    ///   - referenceTranscript: The reference clip's transcript (Drama 3).
     public init(
         voice: TTSVoice? = nil,
         language: String = "en-US",
         rate: Double = 1.0,
         sampleRate: Double = 24_000,
-        referenceAudio: SpokenAudio? = nil
+        referenceAudio: SpokenAudio? = nil,
+        referenceTranscript: String? = nil
     ) {
         self.voice = voice
         self.language = language
         self.rate = min(4.0, max(0.25, rate))
         self.sampleRate = sampleRate
         self.referenceAudio = referenceAudio
+        self.referenceTranscript = referenceTranscript
     }
 }

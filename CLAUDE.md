@@ -8,9 +8,10 @@ swift build
 swift test        # 19 core tests (no GPU, no downloads)
 ```
 
-## ⚠️ MLX GPU inference does not work from `swift run`
+## MLX runs from plain `swift build` (the old "needs an Xcode app" note was wrong)
 
-MLX-Swift can't load its Metal library from a bare SwiftPM executable — you get `Failed to load the default metallib`. This is an MLX-Swift CLI limitation, **not a bug in this package**. GPU inference needs an Xcode **app** build, which bundles `default.metallib` automatically.
+Measured fleet-wide (2026-09-03) and again by DramaTTS (2026-10-14): `swift build`/`swift test` link
+MLX and run Metal; SwiftPM puts `mlx-swift_Cmlx.bundle` beside the binary, and a shipped CLI carries it.
 
 Tester app: `~/Documents/Development Work/Swift/swift-tts-tester` (xcodegen + Xcode 26.6). Build it with:
 ```bash
@@ -100,6 +101,23 @@ Until one exists, the honest recommendation stays **PocketTTS**.
 briefly took that for a platform limit. It was not: `speak` loads the same
 models from a plain SwiftPM binary and always did. Test through the CLI.
 
+## DramaTTS (Fish Audio Drama 3) — opt-in, 2026-10-14
+
+- Licence-gated twice: `DramaEngine(modelDirectory:licence:)` throws unless passed `DramaLicence.version`;
+  refuses < 36 GB Macs. Never the default anywhere. `speak` adds the person-at-a-TTY acceptance.
+- Ported from mlx-audio `fish_drama3` (Python, MIT). Backbone written here (mlx-swift-lm's Qwen35 takes
+  token ids only and its layers are internal); reuses mlx-swift-lm's `gatedDeltaUpdate` + `SwitchGLU`
+  and mlx-audio-swift's `FishS1DAC` weights. **mlx-swift must be ≥ 0.32 (mlx 0.32.x)** to match the
+  reference: on 0.31.6 layer 0 already drifted.
+- Parity is within the reference's own noise floor (Python vs Python with another prefill chunk size
+  agrees only 86–93 % on semantic top-1). Judge any change against that floor, not against 100 %.
+- `CodecStream` = exact streaming decode (FishS1DAC only decodes whole sequences; overlap decoding
+  with 64 frames of context scored 6.5 dB SNR — the codec transformer looks back up to 1,024 frames).
+- Runaways (no EOS, steady hiss) hit 9/20 clips in Python AND Swift. Fixed by the dead-air rule
+  (level OR flat 50 ms-level spread, thresholds measured) + rewind to the last speech, ≤ 3 times → 19/20.
+- MLX buffer cache capped at 256 MB on prepare: footprint 29.2 → 25.8 GB, same speed.
+- Parity probes are opt-in env-var tests (`DramaParity`, `DramaStepParity`, `DramaCodecStream`).
+
 ## Gotchas
 - **Both FluidAudio and mlx-audio-swift export their own `TTSError`.** Engines must `typealias TTSError = SpeechSynthesizer.TTSError` or the ambiguity breaks the build.
 - `MLXEngine` is a `final class @unchecked Sendable`, not an actor — `SpeechGenerationModel` is a non-Sendable existential, so an actor isn't possible.
@@ -111,6 +129,7 @@ Included:
 - **Chatterbox** (MIT, best-sounding) + **Qwen3-TTS** (Apache, multilingual) via **mlx-audio-swift** — MLX/GPU, Mac-class.
 
 Deliberately excluded, do not re-add without a licence review: **Fish S2, F5-TTS, Higgs, XTTS** (non-commercial), **Orpheus** (Llama-licensed weights).
+**Drama 3** passed that review on 2026-10-14 (the user asked for it) as an OPT-IN engine behind its licence; it is not commercial-safe and must never become a default.
 
 ### ⚠️ The code-vs-weights trap — read before adding any model
 A repo can ship **Apache-licensed code with non-commercial weights**. The top-level `LICENSE` file lies about what you actually need, because you run the *weights*, not the code. **Always check the model-weights licence specifically.**
