@@ -179,7 +179,7 @@ so every one of the broken forms is rewritten to the `words [question-xx]?` form
 
 Against the probe's PyTorch reference clips (same text, voice design, language and seed — PyTorch and MLX seeds do not produce the same audio, so this compares measurements, not samples), transcribed back with `transcribe`:
 
-| | reference (PyTorch fp32) | Swift, float32 | Swift, bfloat16 |
+| Measure | reference (PyTorch fp32) | Swift, float32 | Swift, bfloat16 |
 |---|---|---|---|
 | designs, repeats, clones (17 English clips) | 0 % WER | 0 % WER | 0 % WER |
 | es · fr · de · zh · ar | 0 % | 0 % | 0 % |
@@ -194,7 +194,7 @@ Against the probe's PyTorch reference clips (same text, voice design, language a
 
 **Speed and memory.** Loading takes 0.9–1.4 s from a warm disk. Generation, real-time factor over five sentences — **measured while another agent ran FLUX image generation on the same GPU for most of the session**, so these are medians with the best runs in brackets, not clean figures:
 
-| | float32 | bfloat16 (default) |
+| Steps | float32 | bfloat16 (default) |
 |---|---|---|
 | 32 steps (reference default) | 0.7× (≤1.4×) | 1.4× (≤2.4×) |
 | 16 steps | 1.7× (≤2.6×) | 1.6× (≤2.5×) |
