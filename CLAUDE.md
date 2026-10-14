@@ -25,7 +25,7 @@ Both flags are required — mlx-swift ships a CudaBuild plugin that otherwise fa
 |---|---|---|
 | `AppleEngine` | `AVSpeechSynthesizer` | Real, zero download, **tested live** (`AppleLongTextTests`, against `say` + `transcribe`). The old "hangs headless" note was wrong: buffers and `didFinish` arrive on the main queue, which `swift test` and an async CLI both service. |
 | `PocketTTS` | FluidAudio | ✅ **Verified — sounds correct** in the tester. The recommended CoreML/mobile engine. Weights **CC BY 4.0** (not MIT). |
-| `KokoroTTS` | FluidAudio | All 28 English voices work. Still **mispronounces** — see below. |
+| `KokoroTTS` | FluidAudio + `MisakiG2P` | All 28 English voices work, and it **reads correctly since 3.1.0** (Misaki port, below). speak's default engine from 0.4.0. |
 | `MLXTTS` (Chatterbox) | mlx-audio-swift | Compiles; downloaded (416 MB) + loaded live. GPU inference pending an Xcode app run. |
 | `MLXTTS` (Qwen3) | mlx-audio-swift | Compiles; live GPU test pending. |
 
@@ -59,7 +59,23 @@ the 21 English presets with licences; `defaultID` (`alba`) is passed explicitly 
 cannot change the default under us. Sizes measured from a fresh download into an empty home:
 Kokoro 224 MB, Pocket 984 MB (plus ~450 MB of CoreML compile cache in ~/Library/Caches/<app>).
 
-## Kokoro: all 28 voices now, but it still mispronounces
+## Kokoro reads through Misaki (3.1.0) — the history below is why
+
+- `MisakiG2P` (Support/) = Misaki 0.9.4 en.py: gold → silver lookup with grow_dictionary variants, apply_stress,
+  special cases (a/an/am/I/to/in/the/used), -s/-ed/-ing on known stems, NNP letter spelling, ɾ→T ʔ→t (Kokoro 1.0
+  is Misaki v1). spaCy tags are guessed from the previous word (verb cues, determiners, number words). Output
+  matches Python Misaki byte-for-byte on the bake-off narration (`MisakiG2PTests`, enabled when the lexicon exists).
+- Lexicons: `~/.cache/fluidaudio/Models/kokoro/{us,gb}_{gold,silver}.json` — FluidAudio's g2p-only download
+  already fetches every root .json; it never reads them. `b…` voices use gb.
+- `NeuralG2P` re-implements FluidAudio's internal `G2PModel` (BART, cpuOnly) for OOV words only.
+- `SpokenText.normalize` (SpeechSynthesizer/Support) runs first, in Kokoro and Pocket; Apple does its own.
+- `KokoroFiles.isDownloaded()` checks FluidAudio's `ModelNames.*.requiredModels` + the lexicons — `isDownloaded`
+  is on `TTSEngine` now (default: `isReady` for downloadable models, `true` otherwise).
+- Measured on the bake-off texts with `transcribe`: WER 26.8 % → 9.3 %, numbers 1 → 9/11 (the 2 misses are
+  scorer/transcriber artefacts), long paragraph 9.7 % → 0.7 %. Python Misaki phonemes via `--phonemes`: 0.9 %.
+- Trap: do not judge numbers by the bake-off scorer alone — it NFKD-strips "£", so "£82.99" never matches.
+
+## Kokoro: all 28 voices now (the pronunciation notes below are pre-3.1.0 history)
 
 **Voices — fixed.** The converted repo (`FluidInference/kokoro-82m-coreml`) ships
 exactly one English pack, `ANE/af_heart.bin`. The engine listed five and four of
@@ -103,8 +119,7 @@ from `laishere/kokoro-coreml`), **not** Kokoro's reference Misaki G2P. Proven
 upstream twice over: `SpokenAudio` decode is byte-identical to FluidAudio's raw
 WAV, and PocketTTS through the same pipeline sounds fine.
 
-**This disqualifies Kokoro's *text* path outright** — not just for vocabulary
-work, for prose. **Prefer PocketTTS for the CoreML tier.**
+~~This disqualifies Kokoro's *text* path outright.~~ Fixed in 3.1.0 by `MisakiG2P` (above).
 
 ## The phoneme bypass works — proven, and shipped
 
@@ -120,12 +135,12 @@ encoder's reference behaviour is to *silently drop* what it does not recognise
 you never learn about, which is the exact failure this feature exists to
 escape.
 
-**What is still missing is a G2P to feed it.** Hand-written IPA proves the
+**What was missing was a G2P to feed it** — now `MisakiG2P`. Hand-written IPA proves the
 pipeline; it does not make a usable tool, and Band9's word data has no `ipa`
 field. Options, in order of appetite: ship a CMUdict-style lookup table with
 letter-to-sound fallback; port **Misaki** (Kokoro's reference G2P); or lift the
 front end from `mweinbach/kokoro-swift`, which already does Misaki in Swift.
-Until one exists, the honest recommendation stays **PocketTTS**.
+(Misaki was ported; PocketTTS is no longer the only honest CoreML recommendation.)
 
 `g2ptest` under scratchpad is dead — it failed with a CoreML MIL error and I
 briefly took that for a platform limit. It was not: `speak` loads the same

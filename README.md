@@ -4,6 +4,8 @@ On-device text-to-speech for macOS and iOS. One engine protocol, curated open mo
 
 Models are **downloaded on first use** and cached, so the app ships small and every later run is fully offline.
 
+**Text is read as words.** `SpokenText.normalize` writes out numbers, years, dates, times, money in several currencies, percentages, decimals, ranges, units, phone numbers and common abbreviations before a model sees them (`"$1,250.50"` → "one thousand two hundred fifty dollars and fifty cents"). It is a pure function any engine can use; Kokoro and PocketTTS apply it themselves. **Kokoro reads through Misaki**, its own reference front end, ported to Swift (3.1.0) — no more "is" read as "ice".
+
 ## The models
 
 All but the two opt-in ones are commercial-safe (Apple's system voices, or Apache-2.0 / MIT / CC BY 4.0 *weights*) and they split by runtime tier:
@@ -11,7 +13,7 @@ All but the two opt-in ones are commercial-safe (Apple's system voices, or Apach
 | Model | License | Runtime | Runs on iPhone? | Cloning | Status | Best for |
 |---|---|---|---|---|---|---|
 | **Apple (system)** | Apple (free to use) | System | ✅ | — | ✅ built-in | zero-config default & fallback, every device |
-| **Kokoro-82M** | Apache-2.0 | CoreML / ANE | ✅ | — | ✅ **verified** (live audio) | fast, light (9 langs, SSML) |
+| **Kokoro-82M** | Apache-2.0 | CoreML / ANE | ✅ | — | ✅ **verified** (live audio, 0.7–1.3 % word error on prose) | best-sounding small model; 28 English voices |
 | **PocketTTS** | CC BY 4.0 weights (credit Kyutai; code MIT) — voices `cosette`, `jean` CC BY-NC | CoreML | ✅ | ✅ | ✅ **verified** (live audio) | small + cloning on mobile |
 | **Chatterbox** | MIT | MLX / GPU | ❌ Mac | ✅ | ✅ compiled | best-sounding, emotion + 10s cloning |
 | **Qwen3-TTS** | Apache-2.0 | MLX / GPU | ❌ Mac | ✅ | ✅ compiled | multilingual, long-form |
@@ -56,8 +58,23 @@ let audio = try await engine.synthesize("Hello.")
 import KokoroTTS   // or PocketTTS
 
 let engine = KokoroEngine()
-try await engine.prepare { print("downloading… \(Int($0 * 100))%") }  // ~350 MB first run
-let audio = try await engine.synthesize("Hello from Kokoro.")
+try await engine.prepare { print("downloading… \(Int($0 * 100))%") }  // 224 MB first run
+let audio = try await engine.synthesize("Hello from Kokoro, on 3 Oct 2026 at 9:45 pm.")
+
+await engine.isDownloaded          // every file on disk? (true before loading — ask before going offline)
+KokoroVoices.defaultID             // "af_heart"
+try await engine.phonemes(for: "Is this it?")   // "ˌɪz ðɪs ɪt?" — what the model is handed
+```
+
+**Text normalising** (in the core, no model):
+```swift
+import SpeechSynthesizer
+
+SpokenText.normalize("On 3 Oct 2026 Dr. Smith paid $1,250.50 at 9:45 pm.")
+// "On the third of October twenty twenty-six Doctor Smith paid one thousand two hundred
+//  fifty dollars and fifty cents at nine forty-five p.m."
+SpokenText.normalize("3/10/2026", language: "en-GB")   // "the third of October, twenty twenty-six"
+NumberWords.year(1905)                                  // "nineteen oh five"
 ```
 
 **Supertonic** (ONNX, 31 languages, mobile-class) — `import SupertonicTTS`:
@@ -206,7 +223,7 @@ The Python MLX probe (bfloat16, uncontended) reached 2.95× at 32 steps and 5.55
 
 - ✅ **Core (`SpeechSynthesizer`) — built + unit-tested.** `SpokenAudio` WAV encode/decode, `TTSModel` metadata/licensing, `SynthesisOptions`, errors. Zero deps.
 - ✅ **AppleEngine — real, in the core, tested live.** `AVSpeechSynthesizer`; no download, every device. **3.0.1 fixed dropped speech:** the buffer callback hands back an empty buffer at the end of *every* stretch it synthesises, not just the last, and the engine stopped at the first — a 144-word paragraph came back as 12.4 s of its 40.1 s. It now ends on the delegate's `didFinish`. Tested against `say` (same voice: 40.1 s and 40.1 s) and transcribed back at 0.7 % word error (was 67 %).
-- ✅ **KokoroTTS — verified end-to-end** (downloads + produces 24 kHz audio). ⚠️ **Pronunciation caveat:** FluidAudio 0.15.2's Kokoro uses a small *neural* G2P (not Kokoro's reference Misaki G2P) and mispronounces some words ("Hello" → "Hi hoy"). The audio path is correct (verified byte-identical to FluidAudio's raw output); the garbling is upstream in FluidAudio's G2P. Prefer PocketTTS for the CoreML tier until FluidAudio's Kokoro G2P improves. **Long text (3.0.1):** the model takes at most 510 phonemes a pass and used to throw `phonemeSequenceTooLong`; the engine now cuts text over 300 characters at sentence ends, then clause marks, then spaces, speaks each piece with a 0.25 s gap, and halves any piece that still overflows. The 144-word paragraph that failed: 47.0 s in three pieces, 9.7 % word error (the G2P's, not the cutting's).
+- ✅ **KokoroTTS — verified end-to-end, and now reads correctly (3.1.0).** FluidAudio runs Kokoro's seven CoreML stages, but put every word through a small *neural* G2P instead of Kokoro's reference front end, [Misaki](https://github.com/hexgrad/misaki): it read "is" as "ice" and "this" as "thighs" every time and dropped all punctuation. `KokoroEngine` now reads through `MisakiG2P`, a port of Misaki 0.9.4's English lexicon lookup, stress rules, context words ("the" before a vowel, "to", "a") and -s/-ed/-ing endings, over the `us_gold`/`us_silver` (or `gb_…` for `b…` voices) lexicons FluidAudio already downloads; the neural model is kept for words the lexicon lacks, mostly names. On a voice bake-off's texts, transcribed back: word error 26.8 % → 9.3 % overall, prose 13–26 % → 0–2.4 %, the 144-word paragraph 9.7 % → 0.7 %; number items 1 → 9 of 11 with `SpokenText`. Its output matches Python Misaki's exactly on the bake-off narration (a unit test, when the lexicon is on disk), and Python Misaki's phonemes through the same model scored 0.9 %. Part-of-speech is guessed from the word before (Misaki uses spaCy), which only matters for the few words the lexicon spells by tag ("live", "read"). **Long text (3.0.1):** the model takes at most 510 phonemes a pass; the engine cuts text over 300 characters at sentence ends, then clause marks, then spaces, speaks each piece with a 0.25 s gap, and halves any piece that still overflows. `isDownloaded` answers from the files (FluidAudio's own lists), so a caller can run an installed Kokoro with the network off; `isReady` is only true after loading.
 - ✅ **PocketTTS — verified, sounds correct.** FluidAudio 0.15.2; the recommended CoreML/mobile engine (CC BY 4.0 weights, cloning). Runs the same pipeline as Kokoro and sounds right. All 21 English presets are listed (3.0.1; it used to offer one), each with its licence.
 - ✅ **SupertonicTTS — verified end-to-end.** Cold install (382 MB) → 44.1 kHz audio, and the
   output was transcribed back with Apple's speech recogniser to confirm it is intelligible
@@ -252,7 +269,7 @@ For a shipping commercial product, consider hosting the weights yourself (your o
 swift test
 ```
 
-Covers the core: WAV encoding (header, sample rate, clamping), model licensing/runtime invariants, options clamping, and errors — for Drama 3 the text chunking against the reference's own outputs, the licence and memory gates, the frame budget and the dead-air rule — and for OmniVoice the vocabulary, tag filtering and question-tag placement, language codes, chunking, audio clean-up, the licence and memory gates and the model-folder checks (36 tests, no model). The model tests and the parity probes need weights, so they are opt-in:
+Covers the core: the text normaliser (`SpokenTextTests`, ~170 cases) and the Misaki port (`MisakiG2PTests`, with a check against Python Misaki's output that runs when the lexicon is on disk), WAV encoding (header, sample rate, clamping), model licensing/runtime invariants, options clamping, and errors — for Drama 3 the text chunking against the reference's own outputs, the licence and memory gates, the frame budget and the dead-air rule — and for OmniVoice the vocabulary, tag filtering and question-tag placement, language codes, chunking, audio clean-up, the licence and memory gates and the model-folder checks (36 tests, no model). The model tests and the parity probes need weights, so they are opt-in:
 
 ```bash
 DRAMA_MODEL=<model folder> DRAMA_REFERENCE=<dump folder> swift test --filter "DramaParity|DramaStepParity"
@@ -269,7 +286,7 @@ OMNIVOICE_MODEL=<mlx-community/OmniVoice folder> swift test --filter OmniVoiceMo
 
 ## License
 
-MIT License (this package) — see LICENSE. Each **model's** weights carry their own licence; see the table above. Drama 3's weights are under the Fish Audio Community License v1.0 (Copyright © 39 AI, INC.), which this package does not redistribute; OmniVoice's are CC BY-NC (Xiaomi Corp. and the OmniVoice authors) with Boson AI's Higgs Audio 2 tokenizer under the Boson Higgs Audio 2 Community License and the Meta Llama 3 Community License (texts and NOTICE in [LICENSES/](LICENSES/)), also not redistributed — `OmniVoiceTTS` ports parts of k2-fsa/OmniVoice's Apache-2.0 code (voice-design check, text chunking, duration rule, audio clean-up); `DramaTTS` is a port of `fish_drama3` from [mlx-audio](https://github.com/Blaizzy/mlx-audio) (MIT, Copyright (c) 2024 Prince Canuma), and reuses mlx-swift-lm (MIT, Copyright (c) 2024 ml-explore) and mlx-audio-swift (MIT, Copyright (c) 2025 Prince Canuma). Built with Fish Audio.
+MIT License (this package) — see LICENSE. Each **model's** weights carry their own licence; see the table above. Drama 3's weights are under the Fish Audio Community License v1.0 (Copyright © 39 AI, INC.), which this package does not redistribute; OmniVoice's are CC BY-NC (Xiaomi Corp. and the OmniVoice authors) with Boson AI's Higgs Audio 2 tokenizer under the Boson Higgs Audio 2 Community License and the Meta Llama 3 Community License (texts and NOTICE in [LICENSES/](LICENSES/)), also not redistributed — `OmniVoiceTTS` ports parts of k2-fsa/OmniVoice's Apache-2.0 code (voice-design check, text chunking, duration rule, audio clean-up); `KokoroTTS` ports Misaki's English G2P ([hexgrad/misaki](https://github.com/hexgrad/misaki), Apache-2.0) and FluidAudio's neural G2P wrapper (Apache-2.0); `DramaTTS` is a port of `fish_drama3` from [mlx-audio](https://github.com/Blaizzy/mlx-audio) (MIT, Copyright (c) 2024 Prince Canuma), and reuses mlx-swift-lm (MIT, Copyright (c) 2024 ml-explore) and mlx-audio-swift (MIT, Copyright (c) 2025 Prince Canuma). Built with Fish Audio.
 
 ## Author
 

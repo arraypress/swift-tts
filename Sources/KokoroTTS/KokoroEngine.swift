@@ -20,6 +20,7 @@ public actor KokoroEngine: TTSEngine {
     public nonisolated var model: TTSModel { .kokoro }
 
     private let manager: KokoroAneManager
+    private let phonemizer = KokoroPhonemizer()
     private var prepared = false
 
     /// Create a Kokoro engine (English variant by default).
@@ -29,14 +30,49 @@ public actor KokoroEngine: TTSEngine {
 
     public var isReady: Bool { prepared }
 
+    /// Every file on disk, loaded or not — see ``KokoroFiles``.
+    public var isDownloaded: Bool { KokoroFiles.isDownloaded() }
+
+    /// Downloads what is missing (224 MB on a fresh Mac), reporting
+    /// progress, then loads the seven CoreML stages and the US lexicon.
     public func prepare(onProgress: (@Sendable (Double) -> Void)?) async throws {
         do {
-            try await manager.initialize()   // downloads on first run, then loads
+            // The model, then the G2P folder with Misaki's lexicons — each a
+            // no-op when its files are present. FluidAudio's `initialize()`
+            // downloads too, but reports no progress.
+            try await KokoroAneResourceDownloader.ensureModels(variant: .english) { progress in
+                onProgress?(0.9 * progress.fractionCompleted)
+            }
+            try await KokoroAneResourceDownloader.ensureG2PAssets { progress in
+                onProgress?(0.9 + 0.08 * progress.fractionCompleted)
+            }
+            try await manager.initialize()
         } catch {
-            throw TTSError.modelDownloadFailed(String(describing: error))
+            // A network failure in a sentence ("Could not connect to the
+            // server."), not an NSError dump; anything else as it is.
+            let failure = error as NSError
+            throw TTSError.modelDownloadFailed(
+                failure.domain == NSURLErrorDomain ? failure.localizedDescription : String(describing: error))
         }
+        try await phonemizer.prepare(british: false)
         prepared = true
         onProgress?(1.0)
+    }
+
+    /// `text` as the phonemes Kokoro will be given: normalised (numbers,
+    /// dates, money… as words), then read through Misaki's lexicon, with the
+    /// neural G2P for words it lacks. Needs the files, not a loaded model.
+    ///
+    /// - Parameter voice: A voice id; `b…` voices read with the British lexicon.
+    public func phonemes(for text: String, voice: String? = nil, language: String = "en-US") async throws -> String {
+        let british = Self.isBritish(voice)
+        let spoken = SpokenText.normalize(text, language: british ? "en-GB" : language)
+        return try await phonemizer.phonemes(spoken, british: british)
+    }
+
+    /// Misaki reads British voices (`bf_…`, `bm_…`) with its British lexicon.
+    static func isBritish(_ voice: String?) -> Bool {
+        (voice ?? KokoroVoices.defaultID).hasPrefix("b")
     }
 
     /// Every English voice Kokoro-82M was trained with.
@@ -61,14 +97,18 @@ public actor KokoroEngine: TTSEngine {
             try await KokoroVoicePacks.ensure(voice, in: KokoroVoicePacks.cacheDirectory)
         }
 
-        // Long text is cut into pieces the model can take (see KokoroText)
-        // and the audio joined; short text goes through whole, as before.
-        let pieces = KokoroText.pieces(text)
+        // Numbers, dates, money and abbreviations become words first; long
+        // text is then cut into pieces the model can take (see KokoroText)
+        // and the audio joined.
+        let british = Self.isBritish(options.voice?.id)
+        let spoken = SpokenText.normalize(text, language: british ? "en-GB" : options.language)
+        let pieces = KokoroText.pieces(spoken)
         var samples: [Float] = []
         var sampleRate = 24_000.0
-        for (index, piece) in pieces.enumerated() {
-            let audio = try await speak(piece, voice: options.voice?.id, speed: Float(options.rate))
-            if index > 0 { samples += KokoroText.gap(sampleRate: audio.sampleRate) }
+        for piece in pieces {
+            let audio = try await speak(piece, voice: options.voice?.id, british: british, speed: Float(options.rate))
+            guard !audio.isEmpty else { continue }
+            if !samples.isEmpty { samples += KokoroText.gap(sampleRate: audio.sampleRate) }
             samples += audio.samples
             sampleRate = audio.sampleRate
         }
@@ -76,9 +116,16 @@ public actor KokoroEngine: TTSEngine {
     }
 
     /// One piece; if the model still finds it too long, its halves.
-    private func speak(_ piece: String, voice: String?, speed: Float) async throws -> SpokenAudio {
+    private func speak(_ piece: String, voice: String?, british: Bool, speed: Float) async throws -> SpokenAudio {
         do {
-            let result = try await manager.synthesizeDetailed(text: piece, voice: voice, speed: speed)
+            // Kokoro's own front end (Misaki) instead of FluidAudio's neural
+            // G2P, which says "ice" for "is". Punctuation stays in, so the
+            // model pauses and lifts a question the way it was trained to.
+            let phonemes = try await phonemizer.phonemes(piece, british: british)
+            guard !phonemes.trimmingCharacters(in: .whitespaces).isEmpty else {
+                return SpokenAudio(samples: [], sampleRate: 24_000)
+            }
+            let result = try await manager.synthesizeFromPhonemesDetailed(phonemes, voice: voice, speed: speed)
             return SpokenAudio(samples: result.samples, sampleRate: Double(result.sampleRate))
         } catch let error as KokoroAneError {
             switch error {
@@ -86,8 +133,8 @@ public actor KokoroEngine: TTSEngine {
                 guard let (first, second) = KokoroText.halves(piece) else {
                     throw TTSError.synthesisFailed("Kokoro cannot say “\(piece.prefix(40))” in one pass: \(error)")
                 }
-                let head = try await speak(first, voice: voice, speed: speed)
-                let tail = try await speak(second, voice: voice, speed: speed)
+                let head = try await speak(first, voice: voice, british: british, speed: speed)
+                let tail = try await speak(second, voice: voice, british: british, speed: speed)
                 return SpokenAudio(samples: head.samples + KokoroText.gap(sampleRate: head.sampleRate) + tail.samples,
                                    sampleRate: head.sampleRate)
             default:

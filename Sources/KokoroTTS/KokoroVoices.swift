@@ -18,6 +18,12 @@ import SpeechSynthesizer
 /// to be the same bytes wrapped differently. See ``KokoroVoicePacks``.
 public enum KokoroVoices {
 
+    /// The voice used when none is named: `af_heart`, American English,
+    /// female. Kokoro's own pick — its model card grades it A, the highest of
+    /// the 28 English voices — and the only pack the CoreML conversion ships,
+    /// so the default needs no second download. Apache-2.0 like the model.
+    public static let defaultID = "af_heart"
+
     /// The letter pairs Kokoro encodes into every voice id.
     ///
     /// First letter is the language, second is the speaker's gender: `bf_emma`

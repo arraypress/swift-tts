@@ -18,6 +18,11 @@ public protocol TTSEngine: Sendable {
     /// Whether the model's weights are downloaded and loaded, ready to synthesize.
     var isReady: Bool { get async }
 
+    /// Whether every file the model needs is on disk, so ``prepare(onProgress:)``
+    /// will not touch the network. Answered from the files, before loading —
+    /// unlike ``isReady``, which is only true after.
+    var isDownloaded: Bool { get async }
+
     /// Download (if needed) and load the model. Call once before synthesizing.
     ///
     /// The first call for a given model downloads its weights; subsequent runs
@@ -34,6 +39,12 @@ public protocol TTSEngine: Sendable {
 }
 
 public extension TTSEngine {
+
+    /// Engines with nothing to download are always downloaded; others are
+    /// once loaded. Engines that can check their files say so sooner.
+    var isDownloaded: Bool {
+        get async { model.requiresDownload ? await isReady : true }
+    }
 
     /// Prepare with no progress callback.
     func prepare() async throws {
