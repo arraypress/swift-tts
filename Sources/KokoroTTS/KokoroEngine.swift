@@ -61,13 +61,38 @@ public actor KokoroEngine: TTSEngine {
             try await KokoroVoicePacks.ensure(voice, in: KokoroVoicePacks.cacheDirectory)
         }
 
+        // Long text is cut into pieces the model can take (see KokoroText)
+        // and the audio joined; short text goes through whole, as before.
+        let pieces = KokoroText.pieces(text)
+        var samples: [Float] = []
+        var sampleRate = 24_000.0
+        for (index, piece) in pieces.enumerated() {
+            let audio = try await speak(piece, voice: options.voice?.id, speed: Float(options.rate))
+            if index > 0 { samples += KokoroText.gap(sampleRate: audio.sampleRate) }
+            samples += audio.samples
+            sampleRate = audio.sampleRate
+        }
+        return SpokenAudio(samples: samples, sampleRate: sampleRate)
+    }
+
+    /// One piece; if the model still finds it too long, its halves.
+    private func speak(_ piece: String, voice: String?, speed: Float) async throws -> SpokenAudio {
         do {
-            let wav = try await manager.synthesize(
-                text: text,
-                voice: options.voice?.id,
-                speed: Float(options.rate)
-            )
-            return try SpokenAudio(wav: wav)
+            let result = try await manager.synthesizeDetailed(text: piece, voice: voice, speed: speed)
+            return SpokenAudio(samples: result.samples, sampleRate: Double(result.sampleRate))
+        } catch let error as KokoroAneError {
+            switch error {
+            case .phonemeSequenceTooLong, .acousticFramesExceedCap:
+                guard let (first, second) = KokoroText.halves(piece) else {
+                    throw TTSError.synthesisFailed("Kokoro cannot say “\(piece.prefix(40))” in one pass: \(error)")
+                }
+                let head = try await speak(first, voice: voice, speed: speed)
+                let tail = try await speak(second, voice: voice, speed: speed)
+                return SpokenAudio(samples: head.samples + KokoroText.gap(sampleRate: head.sampleRate) + tail.samples,
+                                   sampleRate: head.sampleRate)
+            default:
+                throw TTSError.synthesisFailed(String(describing: error))
+            }
         } catch let error as TTSError {
             throw error
         } catch {

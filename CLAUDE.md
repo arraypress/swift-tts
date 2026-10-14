@@ -5,7 +5,7 @@ On-device, commercial-safe text-to-speech for macOS/iOS. Module: **SpeechSynthes
 ## Build & test
 ```bash
 swift build
-swift test        # 19 core tests (no GPU, no downloads)
+swift test        # unit tests, no GPU, no downloads; the Apple long-text tests speak live and need `say` (`transcribe` optional)
 ```
 
 ## MLX runs from plain `swift build` (the old "needs an Xcode app" note was wrong)
@@ -23,11 +23,41 @@ Both flags are required — mlx-swift ships a CudaBuild plugin that otherwise fa
 
 | Engine | Backend | State |
 |---|---|---|
-| `AppleEngine` | `AVSpeechSynthesizer` | Real, compiled, zero download. Live render needs an app run loop (**hangs headless**) → guard-tested only. |
-| `PocketTTS` | FluidAudio | ✅ **Verified — sounds correct** in the tester. The recommended CoreML/mobile engine. |
+| `AppleEngine` | `AVSpeechSynthesizer` | Real, zero download, **tested live** (`AppleLongTextTests`, against `say` + `transcribe`). The old "hangs headless" note was wrong: buffers and `didFinish` arrive on the main queue, which `swift test` and an async CLI both service. |
+| `PocketTTS` | FluidAudio | ✅ **Verified — sounds correct** in the tester. The recommended CoreML/mobile engine. Weights **CC BY 4.0** (not MIT). |
 | `KokoroTTS` | FluidAudio | All 28 English voices work. Still **mispronounces** — see below. |
 | `MLXTTS` (Chatterbox) | mlx-audio-swift | Compiles; downloaded (416 MB) + loaded live. GPU inference pending an Xcode app run. |
 | `MLXTTS` (Qwen3) | mlx-audio-swift | Compiles; live GPU test pending. |
+
+## AppleEngine: end on `didFinish`, never on an empty buffer (3.0.1)
+
+`write(_:toBufferCallback:)` hands back a **zero-length buffer at the end of every stretch** it
+synthesises, not only at the end. Measured on a 144-word paragraph: four empty buffers, after
+12.4 s, 22.9 s, 32.6 s and 40.1 s of audio, then `didFinish` straight after the last. The engine
+used to stop at the first, so long text came back as its opening sentences (and audiobook mode
+skipped sentences). It now accumulates across empty buffers and resumes on the delegate's
+`didFinish` (`didCancel` → error). Probe: `scratchpad/probe-apple` in the 2026-10-14 session.
+
+## Kokoro: long text is cut into pieces (3.0.1)
+
+The CoreML chain takes **510 phonemes** a pass (and 2,000 acoustic frames ≈ 50 s);
+FluidAudio throws `phonemeSequenceTooLong` beyond. Its `G2PModel` is internal, so phonemes cannot
+be counted ahead: `KokoroText` cuts by characters (300 ≈ 300 phonemes; measured 775 chars → 745
+phonemes) at sentence ends → clause marks → spaces, the engine speaks each with a 0.25 s gap
+(FluidAudio strips punctuation, so there is no pause of its own), and halves any piece that still
+throws `phonemeSequenceTooLong`/`acousticFramesExceedCap`. **Kokoro's CoreML graphs crash inside
+the test runner** (`shape for TensorData is not static`) — live Kokoro tests run the `speak`
+binary from speak's own suite.
+
+## PocketTTS licence: CC BY 4.0 weights, two NC voices (3.0.1)
+
+The model card (kyutai/pocket-tts, gated; read via the HF API) says `license: cc-by-4.0`; only the
+GitHub code is MIT. Credit Kyutai (`TTSModel.attribution`). Preset voices keep their recordings'
+terms (huggingface.co/kyutai/tts-voices README): VCTK + alba-mackenna CC BY 4.0, voice-donations +
+voice-zero CC0, **Expresso → `cosette` and EARS → `jean` are CC BY-NC 4.0**. `PocketVoices` lists
+the 21 English presets with licences; `defaultID` (`alba`) is passed explicitly so FluidAudio
+cannot change the default under us. Sizes measured from a fresh download into an empty home:
+Kokoro 224 MB, Pocket 984 MB (plus ~450 MB of CoreML compile cache in ~/Library/Caches/<app>).
 
 ## Kokoro: all 28 voices now, but it still mispronounces
 
@@ -144,7 +174,7 @@ models from a plain SwiftPM binary and always did. Test through the CLI.
 ## Model curation — Apache/MIT weights only (commercial safety)
 
 Included:
-- **Kokoro-82M** (Apache) + **PocketTTS** (MIT) via **FluidAudio** — CoreML/ANE, runs on iPhone. PocketTTS adds voice cloning.
+- **Kokoro-82M** (Apache) + **PocketTTS** (CC BY 4.0 weights, credit Kyutai; code MIT; voices cosette + jean CC BY-NC) via **FluidAudio** — CoreML/ANE, runs on iPhone. PocketTTS adds voice cloning.
 - **Chatterbox** (MIT, best-sounding) + **Qwen3-TTS** (Apache, multilingual) via **mlx-audio-swift** — MLX/GPU, Mac-class.
 
 Deliberately excluded, do not re-add without a licence review: **Fish S2, F5-TTS, Higgs, XTTS** (non-commercial), **Orpheus** (Llama-licensed weights).

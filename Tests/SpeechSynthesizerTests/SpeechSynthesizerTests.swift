@@ -87,12 +87,34 @@ final class SpeechSynthesizerTests: XCTestCase {
         // which permits commercial use under conditions the others do not impose — so the
         // invariant worth holding is that anything outside Apache/MIT *says so*.
         for model in TTSModel.allCases where model.requiresDownload {
-            let permissive = ["Apache-2.0", "MIT"].contains(model.license)
+            // CC BY 4.0 asks for credit and nothing more.
+            let permissive = ["Apache-2.0", "MIT", "CC-BY-4.0"].contains(model.license)
             XCTAssertEqual(
                 permissive, !model.hasLicenseRestrictions,
                 "\(model) is \(model.license) — hasLicenseRestrictions must reflect that"
             )
         }
+    }
+
+    func testPocket_weightsAreCCBYNotMIT() {
+        // The code is MIT; the weights are CC BY 4.0 (kyutai/pocket-tts model
+        // card), which permits commercial use with credit to Kyutai.
+        XCTAssertEqual(TTSModel.pocket.license, "CC-BY-4.0")
+        XCTAssertTrue(TTSModel.pocket.isCommercialUseAllowed)
+        XCTAssertNotNil(TTSModel.pocket.attribution)
+        XCTAssertTrue(TTSModel.pocket.attribution?.contains("Kyutai") == true)
+    }
+
+    func testDownloadSizes_areTheMeasuredOnes() {
+        // Measured from a fresh download, not guessed (they were 350 and 400).
+        XCTAssertEqual(TTSModel.kokoro.approximateSizeMB, 224)
+        XCTAssertEqual(TTSModel.pocket.approximateSizeMB, 984)
+    }
+
+    func testVoice_licenceDefaultsToTheModels() {
+        let voice = TTSVoice(id: "x", name: "X", language: "en", model: .kokoro)
+        XCTAssertNil(voice.license)
+        XCTAssertTrue(voice.isCommercialUseAllowed)
     }
 
     func testRuntimeSplit_gpuIsNotMobile() {

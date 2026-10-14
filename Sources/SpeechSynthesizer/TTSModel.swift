@@ -23,7 +23,8 @@ public enum TTSModel: String, CaseIterable, Sendable {
     /// Kokoro-82M — fast, light, 9 languages, SSML. (Apache-2.0)
     case kokoro
 
-    /// PocketTTS — small, streaming, voice cloning. (MIT)
+    /// PocketTTS (Kyutai) — small, streaming, voice cloning. (Weights CC BY 4.0,
+    /// credit Kyutai; the code is MIT. Two preset voices are CC BY-NC.)
     case pocket
 
     /// Chatterbox — top-tier quality + emotion + cloning; Mac-class. (MIT)
@@ -76,12 +77,15 @@ public enum TTSModel: String, CaseIterable, Sendable {
     /// The model-weights licence.
     ///
     /// The *weights*, not the sample code — those differ for Supertonic, whose reference
-    /// implementation is MIT while the model it loads is OpenRAIL-M.
+    /// implementation is MIT while the model it loads is OpenRAIL-M, and for PocketTTS,
+    /// whose code is MIT while its weights are CC BY 4.0 (kyutai/pocket-tts model card).
+    /// A preset voice can carry terms of its own: see ``TTSVoice/license``.
     public var license: String {
         switch self {
         case .apple: "Apple system (free to use)"
         case .kokoro, .qwen3: "Apache-2.0"
-        case .pocket, .chatterbox: "MIT"
+        case .pocket: "CC-BY-4.0"
+        case .chatterbox: "MIT"
         case .supertonic: "OpenRAIL-M"
         case .drama: "Fish Audio Community License v1.0"
         case .omnivoice: "CC BY-NC + Higgs Audio 2 Community License"
@@ -135,6 +139,17 @@ public enum TTSModel: String, CaseIterable, Sendable {
         }
     }
 
+    /// The credit the licence asks for, where it asks for one.
+    ///
+    /// CC BY 4.0 permits commercial use on condition of attribution, so an app
+    /// or a recording made with PocketTTS should say so.
+    public var attribution: String? {
+        switch self {
+        case .pocket: "PocketTTS by Kyutai (kyutai/pocket-tts), CC BY 4.0"
+        default: nil
+        }
+    }
+
     /// Whether the licence attaches conditions beyond attribution.
     ///
     /// Surfaced separately so an app can show the difference rather than flattening every
@@ -152,11 +167,17 @@ public enum TTSModel: String, CaseIterable, Sendable {
 
     /// Rough on-disk size once downloaded, in megabytes (order-of-magnitude).
     /// Zero for Apple's built-in voices.
+    ///
+    /// Kokoro and PocketTTS are measured: a fresh download into an empty home
+    /// on 2026-10-14 (FluidAudio 0.15.2) came to 224 MB (182 MB of CoreML
+    /// models and 42 MB of G2P) and 984 MB. Both used to be guessed, at 350
+    /// and 400. CoreML also compiles each model once into the app's cache
+    /// (about 450 MB more for the two together), which is not counted here.
     public var approximateSizeMB: Int {
         switch self {
         case .apple: 0
-        case .kokoro: 350
-        case .pocket: 400
+        case .kokoro: 224
+        case .pocket: 984
         case .chatterbox: 1_000
         case .qwen3: 1_500
         case .supertonic: 400

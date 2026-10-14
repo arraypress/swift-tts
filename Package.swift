@@ -13,7 +13,8 @@ let package = Package(
         .library(name: "SpeechSynthesizer", targets: ["SpeechSynthesizer"]),
         // Kokoro-82M (Apache-2.0) — CoreML/ANE, mobile. FluidAudio-backed.
         .library(name: "KokoroTTS", targets: ["KokoroTTS"]),
-        // PocketTTS (MIT) — CoreML, mobile, voice cloning. FluidAudio-backed.
+        // PocketTTS (weights CC BY 4.0, credit Kyutai; code MIT) — CoreML, mobile,
+        // voice cloning. FluidAudio-backed. Voices cosette and jean are CC BY-NC.
         .library(name: "PocketTTS", targets: ["PocketTTS"]),
         // Chatterbox (MIT) + Qwen3-TTS (Apache) — MLX/GPU, Mac-class. mlx-audio-swift.
         .library(name: "MLXTTS", targets: ["MLXTTS"]),
@@ -114,6 +115,10 @@ let package = Package(
                 .product(name: "MLXAudioCodecs", package: "mlx-audio-swift"),
             ],
             resources: [.copy("Fixtures")]
+        ),
+        .testTarget(
+            name: "PocketTTSTests",
+            dependencies: ["PocketTTS", "SpeechSynthesizer"]
         ),
         .testTarget(
             name: "KokoroTTSTests",

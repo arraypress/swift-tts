@@ -6,20 +6,20 @@ Models are **downloaded on first use** and cached, so the app ships small and ev
 
 ## The models
 
-All are commercial-safe (Apple's system voices, or Apache-2.0 / MIT *weights*) and split by runtime tier:
+All but the two opt-in ones are commercial-safe (Apple's system voices, or Apache-2.0 / MIT / CC BY 4.0 *weights*) and they split by runtime tier:
 
 | Model | License | Runtime | Runs on iPhone? | Cloning | Status | Best for |
 |---|---|---|---|---|---|---|
 | **Apple (system)** | Apple (free to use) | System | ✅ | — | ✅ built-in | zero-config default & fallback, every device |
 | **Kokoro-82M** | Apache-2.0 | CoreML / ANE | ✅ | — | ✅ **verified** (live audio) | fast, light (9 langs, SSML) |
-| **PocketTTS** | MIT | CoreML | ✅ | ✅ | ✅ compiled | small + cloning on mobile |
+| **PocketTTS** | CC BY 4.0 weights (credit Kyutai; code MIT) — voices `cosette`, `jean` CC BY-NC | CoreML | ✅ | ✅ | ✅ **verified** (live audio) | small + cloning on mobile |
 | **Chatterbox** | MIT | MLX / GPU | ❌ Mac | ✅ | ✅ compiled | best-sounding, emotion + 10s cloning |
 | **Qwen3-TTS** | Apache-2.0 | MLX / GPU | ❌ Mac | ✅ | ✅ compiled | multilingual, long-form |
 | **Supertonic 3** | ⚠️ OpenRAIL-M | ONNX Runtime | ✅ | — | ✅ **verified** (live audio) | 31 languages on mobile, 11x real time |
 | **Drama 3** (opt-in) | ⛔ Fish Audio Community License | MLX / GPU, 36 GB Mac | ❌ | ✅ | ✅ **verified** (parity + live audio) | expressive scenes: inline cues, speaker turns |
 | **OmniVoice** (opt-in) | ⛔ CC BY-NC + Boson Higgs Audio 2 Community License | MLX / GPU, 16 GB Mac | ❌ | ✅ | ✅ **verified** (probe parity + live audio) | 600+ languages, designed voices, audiobooks |
 
-> **License hygiene:** the default models are Apple's system voices and Apache/MIT/OpenRAIL-*weights* models. **Drama 3 and OmniVoice are the exceptions, and both are opt-in**: neither engine will start until the caller names its licence version (below). Other restrictive models (Fish S2, F5-TTS, Higgs Audio as a TTS model, XTTS) and Llama-licensed weights (Orpheus) are deliberately **not** supported.
+> **License hygiene:** the default models are Apple's system voices and Apache/MIT/CC BY/OpenRAIL-*weights* models. **PocketTTS's weights are CC BY 4.0, not MIT** (only its code is MIT; kyutai/pocket-tts model card): commercial use is fine with credit to Kyutai (`TTSModel.attribution`). Two of its 21 English preset voices, **`cosette` (Expresso) and `jean` (EARS), are CC BY-NC 4.0 — non-commercial only**; `TTSVoice.license` and `isCommercialUseAllowed` say so per voice, and the default (`alba`, CC BY 4.0) is pinned so neither can become it. **Drama 3 and OmniVoice are the exceptions, and both are opt-in**: neither engine will start until the caller names its licence version (below). Other restrictive models (Fish S2, F5-TTS, Higgs Audio as a TTS model, XTTS) and Llama-licensed weights (Orpheus) are deliberately **not** supported.
 
 ## Architecture
 
@@ -204,10 +204,10 @@ The Python MLX probe (bfloat16, uncontended) reached 2.95× at 32 steps and 5.55
 
 ## Status
 
-- ✅ **Core (`SpeechSynthesizer`) — built + unit-tested (19 tests).** `SpokenAudio` WAV encode/decode, `TTSModel` metadata/licensing, `SynthesisOptions`, errors. Zero deps.
-- ✅ **AppleEngine — real, compiled, in the core.** `AVSpeechSynthesizer`; no download, every device. (Live render needs an app run loop, so guard-tested here.)
-- ✅ **KokoroTTS — verified end-to-end** (downloads + produces 24 kHz audio). ⚠️ **Pronunciation caveat:** FluidAudio 0.15.2's Kokoro uses a small *neural* G2P (not Kokoro's reference Misaki G2P) and mispronounces some words ("Hello" → "Hi hoy"). The audio path is correct (verified byte-identical to FluidAudio's raw output); the garbling is upstream in FluidAudio's G2P. Prefer PocketTTS for the CoreML tier until FluidAudio's Kokoro G2P improves.
-- ✅ **PocketTTS — verified, sounds correct.** FluidAudio 0.15.2; the recommended CoreML/mobile engine (MIT, cloning). Runs the same pipeline as Kokoro and sounds right.
+- ✅ **Core (`SpeechSynthesizer`) — built + unit-tested.** `SpokenAudio` WAV encode/decode, `TTSModel` metadata/licensing, `SynthesisOptions`, errors. Zero deps.
+- ✅ **AppleEngine — real, in the core, tested live.** `AVSpeechSynthesizer`; no download, every device. **3.0.1 fixed dropped speech:** the buffer callback hands back an empty buffer at the end of *every* stretch it synthesises, not just the last, and the engine stopped at the first — a 144-word paragraph came back as 12.4 s of its 40.1 s. It now ends on the delegate's `didFinish`. Tested against `say` (same voice: 40.1 s and 40.1 s) and transcribed back at 0.7 % word error (was 67 %).
+- ✅ **KokoroTTS — verified end-to-end** (downloads + produces 24 kHz audio). ⚠️ **Pronunciation caveat:** FluidAudio 0.15.2's Kokoro uses a small *neural* G2P (not Kokoro's reference Misaki G2P) and mispronounces some words ("Hello" → "Hi hoy"). The audio path is correct (verified byte-identical to FluidAudio's raw output); the garbling is upstream in FluidAudio's G2P. Prefer PocketTTS for the CoreML tier until FluidAudio's Kokoro G2P improves. **Long text (3.0.1):** the model takes at most 510 phonemes a pass and used to throw `phonemeSequenceTooLong`; the engine now cuts text over 300 characters at sentence ends, then clause marks, then spaces, speaks each piece with a 0.25 s gap, and halves any piece that still overflows. The 144-word paragraph that failed: 47.0 s in three pieces, 9.7 % word error (the G2P's, not the cutting's).
+- ✅ **PocketTTS — verified, sounds correct.** FluidAudio 0.15.2; the recommended CoreML/mobile engine (CC BY 4.0 weights, cloning). Runs the same pipeline as Kokoro and sounds right. All 21 English presets are listed (3.0.1; it used to offer one), each with its licence.
 - ✅ **SupertonicTTS — verified end-to-end.** Cold install (382 MB) → 44.1 kHz audio, and the
   output was transcribed back with Apple's speech recogniser to confirm it is intelligible
   speech rather than plausible noise. 10 voices, verified to produce genuinely different audio.

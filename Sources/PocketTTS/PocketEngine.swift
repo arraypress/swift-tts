@@ -2,8 +2,8 @@
 //  PocketEngine.swift
 //  PocketTTS
 //
-//  PocketTTS (MIT) via FluidAudio — CoreML, runs on iPhone + Mac, with voice
-//  cloning. Wraps FluidAudio's `PocketTtsManager` (an actor returning 24 kHz WAV).
+//  PocketTTS (Kyutai; weights CC BY 4.0, code MIT) via FluidAudio — CoreML,
+//  runs on iPhone + Mac, with voice cloning. Wraps FluidAudio's `PocketTtsManager` (an actor returning 24 kHz WAV).
 //
 
 import Foundation
@@ -38,17 +38,19 @@ public actor PocketEngine: TTSEngine {
         onProgress?(1.0)
     }
 
+    /// The English presets, each with its recording's licence — two are
+    /// non-commercial (see ``PocketVoices``).
     public func availableVoices() async throws -> [TTSVoice] {
-        [
-            TTSVoice(id: PocketTtsConstants.defaultVoice, name: "Default", language: "en-US", model: .pocket)
-        ]
+        PocketVoices.voices()
     }
 
     public func synthesize(_ text: String, options: SynthesisOptions) async throws -> SpokenAudio {
         guard !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { throw TTSError.emptyText }
         guard prepared else { throw TTSError.notPrepared }
         do {
-            let wav = try await manager.synthesize(text: text, voice: options.voice?.id)
+            // The default is named here rather than left to FluidAudio, so an
+            // upstream change cannot make a non-commercial voice the default.
+            let wav = try await manager.synthesize(text: text, voice: options.voice?.id ?? PocketVoices.defaultID)
             return try SpokenAudio(wav: wav)
         } catch let error as TTSError {
             throw error
