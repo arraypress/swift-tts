@@ -71,13 +71,17 @@ final class SpeechSynthesizerTests: XCTestCase {
     // MARK: - TTSModel metadata
 
     func testAllModels_areCommercialSafe() {
-        // Drama 3 is the one deliberate exception: opt-in, behind a licence its
-        // engine makes the caller name. Anything else must be commercial-safe.
-        for model in TTSModel.allCases where model != .drama {
+        // Drama 3 and OmniVoice are the deliberate exceptions: opt-in, behind a
+        // licence their engines make the caller name. Anything else must be
+        // commercial-safe.
+        let optIn: Set<TTSModel> = [.drama, .omnivoice]
+        for model in TTSModel.allCases where !optIn.contains(model) {
             XCTAssertTrue(model.isCommercialUseAllowed, "\(model) should be commercial-safe")
         }
-        XCTAssertFalse(TTSModel.drama.isCommercialUseAllowed)
-        XCTAssertTrue(TTSModel.drama.hasLicenseRestrictions)
+        for model in optIn {
+            XCTAssertFalse(model.isCommercialUseAllowed)
+            XCTAssertTrue(model.hasLicenseRestrictions)
+        }
         // Downloadable models carry either a permissive licence or, if not, must be flagged
         // as restricted. The set is no longer uniformly Apache/MIT — Supertonic is OpenRAIL-M,
         // which permits commercial use under conditions the others do not impose — so the

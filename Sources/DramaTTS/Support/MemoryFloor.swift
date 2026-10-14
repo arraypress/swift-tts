@@ -12,17 +12,21 @@
 //
 
 import Foundation
+import SpeechSynthesizer
 
 /// The least memory Drama 3 is allowed to start on.
 enum MemoryFloor {
 
+    /// 36 GB.
+    static let requirement = MemoryRequirement(gigabytes: 36)
+
     /// 36 GB, as `hw.memsize` reports it.
-    static let minimumBytes: UInt64 = 36 * 1_073_741_824
+    static var minimumBytes: UInt64 { requirement.minimumBytes }
 
     /// The refusal for this Mac, or nil when it has enough.
     static func problem(physicalMemory: UInt64 = ProcessInfo.processInfo.physicalMemory) -> DramaError? {
-        guard physicalMemory < minimumBytes else { return nil }
-        return .insufficientMemory(physicalGB: Double(physicalMemory) / 1_073_741_824,
-                                   requiredGB: Double(minimumBytes) / 1_073_741_824)
+        requirement.shortfall(physicalMemory: physicalMemory).map {
+            .insufficientMemory(physicalGB: $0.physicalGB, requiredGB: $0.requiredGB)
+        }
     }
 }

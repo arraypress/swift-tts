@@ -118,6 +118,25 @@ models from a plain SwiftPM binary and always did. Test through the CLI.
 - MLX buffer cache capped at 256 MB on prepare: footprint 29.2 → 25.8 GB, same speed.
 - Parity probes are opt-in env-var tests (`DramaParity`, `DramaStepParity`, `DramaCodecStream`).
 
+## OmniVoiceTTS (k2-fsa OmniVoice) — opt-in, 2026-10-14
+
+- Wraps mlx-audio-swift 0.1.5's port (`OmniVoiceModel`); does NOT fork it. Adds what the port leaves
+  out and the reference does: `_resolve_instruct` vocabulary check (`VoiceDesignVocabulary`), language
+  codes (`OmniLanguages`, 646 from lang_map.py), text chunking + first-piece-as-reference
+  (`OmniText`, `keepsVoiceAcrossChunks`), reference prep and output clean-up (`OmniAudio`), and
+  tag-standalone tokenization (`TagAwareTokenizer` wraps the port's public `tokenizer`).
+- The port loads only via `HubCache.default`/mlx-audio/<owner_name>/ and downloads on a miss.
+  `OmniModelFolder.load` links the caller's folder's files there under a fake repo name (a folder of
+  per-file symlinks: the port lists by URL, which does not follow a symlinked last component →
+  404 "Repository not found"), loads with stdout → /dev/null (the port `print`s), then unlinks and
+  rmdirs only folders it created.
+- Weights: mlx-community/OmniVoice (fp32, 3.27 GB) is the only conversion with the semantic encoder
+  (cloning, and one voice across pieces of long text). The port casts every weight to float32 on load,
+  so bf16 *downloads* save disk, not memory. `-8bit` is unloadable (no quantized layers in the port).
+- Question tags: measured — last on a line or after the punctuation they turn clips to noise; moved
+  to "words [question-xx]?" by `OmniTags.placeQuestionTags`. Unknown brackets are read aloud → removed.
+- Gate like Drama: `OmniVoiceEngine(modelDirectory:licence:)` needs `OmniVoiceLicence.version`; 16 GB floor.
+
 ## Gotchas
 - **Both FluidAudio and mlx-audio-swift export their own `TTSError`.** Engines must `typealias TTSError = SpeechSynthesizer.TTSError` or the ambiguity breaks the build.
 - `MLXEngine` is a `final class @unchecked Sendable`, not an actor — `SpeechGenerationModel` is a non-Sendable existential, so an actor isn't possible.
@@ -136,8 +155,12 @@ A repo can ship **Apache-licensed code with non-commercial weights**. The top-le
 
 **Fish Audio is the textbook case:** code is Apache, weights are CC-BY-NC-SA-4.0 (now a custom "Fish Audio Research License") → non-commercial, and commercial use requires a paid licence from Fish. That's the entire reason it's excluded despite the quality.
 
+**OmniVoice** passed the same review on 2026-10-14 (the user asked for it) as an OPT-IN engine
+(`OmniVoiceTTS`): the old note here called it Apache-2.0 — that is its *code*; its weights are
+**CC BY-NC**, and its audio tokenizer (Boson Higgs Audio 2) is under the Llama-3-derived **Boson Higgs
+Audio 2 Community License**. The code-vs-weights trap again.
+
 ### Evaluated but not included
-- **OmniVoice** (Xiaomi / next-gen Kaldi, Apache-2.0) — 646 languages, diffusion-based, ~40× realtime. Non-autoregressive, so it doesn't do token-stream instruction-following.
 - **Spark-TTS** (0.5 B) — voice *creation* by attribute (gender/pitch/rate). Weights licence needs verifying before use.
 
 ### Why the emotion tags work

@@ -23,6 +23,12 @@ let package = Package(
         // MLX/GPU, expressive inline cues, 36 GB Macs. Opt-in: the engine refuses
         // to start until its licence version is named.
         .library(name: "DramaTTS", targets: ["DramaTTS"]),
+        // OmniVoice (k2-fsa; CC BY-NC weights + the Boson Higgs Audio 2
+        // Community License on its audio tokenizer, NOT commercial-safe) —
+        // MLX/GPU, 600+ languages, voice design from a fixed vocabulary,
+        // cloning. Opt-in: the engine refuses to start until its licence
+        // version is named.
+        .library(name: "OmniVoiceTTS", targets: ["OmniVoiceTTS"]),
     ],
     dependencies: [
         .package(url: "https://github.com/FluidInference/FluidAudio.git", exact: "0.15.2"),
@@ -37,6 +43,8 @@ let package = Package(
         // Drama 3 reuses the gated-delta kernel and switch (expert) layers.
         .package(url: "https://github.com/ml-explore/mlx-swift-lm.git", .upToNextMajor(from: "3.32.3")),
         .package(url: "https://github.com/huggingface/swift-transformers.git", .upToNextMajor(from: "1.1.6")),
+        // OmniVoice loads through mlx-audio-swift's Hugging Face cache layout.
+        .package(url: "https://github.com/huggingface/swift-huggingface.git", .upToNextMajor(from: "0.9.0")),
     ],
     targets: [
         .target(
@@ -82,6 +90,20 @@ let package = Package(
                 .product(name: "MLXAudioCodecs", package: "mlx-audio-swift"),
                 .product(name: "Tokenizers", package: "swift-transformers"),
             ]
+        ),
+        .target(
+            name: "OmniVoiceTTS",
+            dependencies: [
+                "SpeechSynthesizer",
+                .product(name: "MLX", package: "mlx-swift"),
+                .product(name: "MLXAudioTTS", package: "mlx-audio-swift"),
+                .product(name: "HuggingFace", package: "swift-huggingface"),
+                .product(name: "Tokenizers", package: "swift-transformers"),
+            ]
+        ),
+        .testTarget(
+            name: "OmniVoiceTTSTests",
+            dependencies: ["OmniVoiceTTS", "SpeechSynthesizer"]
         ),
         .testTarget(
             name: "DramaTTSTests",

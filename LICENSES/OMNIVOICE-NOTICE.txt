@@ -1,0 +1,28 @@
+OmniVoice — NOTICE
+
+OmniVoice (k2-fsa/OmniVoice) speech model weights are licensed under CC BY-NC
+(Creative Commons Attribution-NonCommercial; the model card names no version),
+Copyright Xiaomi Corp. and the OmniVoice authors. Its code is Apache-2.0.
+swift-tts does not redistribute the weights; the caller downloads them from
+mlx-community/OmniVoice (pinned at defe4bdce0decb321d17e96a4774417be08022ea).
+
+OmniVoice's audio tokenizer is Boson AI's Higgs Audio 2 codec, under the Boson
+Higgs Audio 2 Community License (BOSON-HIGGS-AUDIO-2-COMMUNITY-LICENSE.txt),
+which incorporates the Meta Llama 3 Community License
+(META-LLAMA-3-COMMUNITY-LICENSE.txt):
+
+"Meta Llama 3 is licensed under the Meta Llama 3 Community License, Copyright ©
+Meta Platforms, Inc. All Rights Reserved."
+"Boson Higgs Audio 2 is licensed under the Boson Community License, Copyright ©
+Boson AI USA, Inc. All Rights Reserved."
+
+Built with Higgs Materials licensed from Boson AI USA, Inc., Copyright Boson AI
+USA, Inc., All Rights Reserved and Meta Llama 3 licensed under the Meta Llama 3
+Community License, Copyright Meta Platforms, Inc., All Rights Reserved. Based on
+Meta Llama 3.
+
+Use of the Higgs Materials must follow the Llama 3 Acceptable Use Policy
+(https://llama.meta.com/llama3/use-policy); their output may not be used to
+improve any other large language model; above 100,000 annual active users a
+licence from Boson AI is required. The OmniVoice model card forbids
+unauthorised voice cloning, impersonation and fraud.

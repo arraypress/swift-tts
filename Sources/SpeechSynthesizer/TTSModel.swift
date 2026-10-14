@@ -51,6 +51,14 @@ public enum TTSModel: String, CaseIterable, Sendable {
     /// engine refuses to start until the licence version is named.
     case drama
 
+    /// OmniVoice (k2-fsa) — 600+ languages, voice design from a fixed
+    /// vocabulary, cloning; Mac-class. (CC BY-NC weights + the Boson Higgs
+    /// Audio 2 Community License on its audio tokenizer — NOT commercial-safe.)
+    ///
+    /// Opt-in like Drama 3: its engine refuses to start until the licence
+    /// version is named.
+    case omnivoice
+
     /// A human-readable name.
     public var displayName: String {
         switch self {
@@ -61,6 +69,7 @@ public enum TTSModel: String, CaseIterable, Sendable {
         case .qwen3: "Qwen3-TTS"
         case .supertonic: "Supertonic 3"
         case .drama: "Drama 3"
+        case .omnivoice: "OmniVoice"
         }
     }
 
@@ -75,6 +84,7 @@ public enum TTSModel: String, CaseIterable, Sendable {
         case .pocket, .chatterbox: "MIT"
         case .supertonic: "OpenRAIL-M"
         case .drama: "Fish Audio Community License v1.0"
+        case .omnivoice: "CC BY-NC + Higgs Audio 2 Community License"
         }
     }
 
@@ -83,7 +93,7 @@ public enum TTSModel: String, CaseIterable, Sendable {
         switch self {
         case .apple: .system
         case .kokoro, .pocket: .coreML
-        case .chatterbox, .qwen3, .drama: .mlx
+        case .chatterbox, .qwen3, .drama, .omnivoice: .mlx
         case .supertonic: .onnx
         }
     }
@@ -92,14 +102,14 @@ public enum TTSModel: String, CaseIterable, Sendable {
     public var runsOnMobile: Bool {
         switch self {
         case .apple, .kokoro, .pocket, .supertonic: true
-        case .chatterbox, .qwen3, .drama: false
+        case .chatterbox, .qwen3, .drama, .omnivoice: false
         }
     }
 
     /// Whether the model can clone a voice from a reference sample.
     public var supportsVoiceCloning: Bool {
         switch self {
-        case .pocket, .chatterbox, .qwen3, .drama: true
+        case .pocket, .chatterbox, .qwen3, .drama, .omnivoice: true
         case .apple, .kokoro, .supertonic: false
         }
     }
@@ -120,6 +130,8 @@ public enum TTSModel: String, CaseIterable, Sendable {
         // Commercial use only below US$500k annual revenue, never as a hosted
         // service — not the grant this flag promises.
         case .drama: false
+        // CC BY-NC: non-commercial only.
+        case .omnivoice: false
         }
     }
 
@@ -130,7 +142,7 @@ public enum TTSModel: String, CaseIterable, Sendable {
     public var hasLicenseRestrictions: Bool {
         switch self {
         case .apple, .kokoro, .pocket, .chatterbox, .qwen3: false
-        case .supertonic, .drama: true
+        case .supertonic, .drama, .omnivoice: true
         }
     }
 
@@ -149,6 +161,7 @@ public enum TTSModel: String, CaseIterable, Sendable {
         case .qwen3: 1_500
         case .supertonic: 400
         case .drama: 23_800
+        case .omnivoice: 3_270
         }
     }
 }

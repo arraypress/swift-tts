@@ -1,6 +1,6 @@
 # Swift TTS (SpeechSynthesizer)
 
-On-device text-to-speech for macOS and iOS. One engine protocol, curated open models — commercial-safe by default, plus one opt-in model under a restricted licence (Drama 3) — the text-to-speech counterpart to a multi-engine transcriber, where every backend returns the same `SpokenAudio` regardless of which model produced it.
+On-device text-to-speech for macOS and iOS. One engine protocol, curated open models — commercial-safe by default, plus two opt-in models under restricted licences (Drama 3, OmniVoice) — the text-to-speech counterpart to a multi-engine transcriber, where every backend returns the same `SpokenAudio` regardless of which model produced it.
 
 Models are **downloaded on first use** and cached, so the app ships small and every later run is fully offline.
 
@@ -17,8 +17,9 @@ All are commercial-safe (Apple's system voices, or Apache-2.0 / MIT *weights*) a
 | **Qwen3-TTS** | Apache-2.0 | MLX / GPU | ❌ Mac | ✅ | ✅ compiled | multilingual, long-form |
 | **Supertonic 3** | ⚠️ OpenRAIL-M | ONNX Runtime | ✅ | — | ✅ **verified** (live audio) | 31 languages on mobile, 11x real time |
 | **Drama 3** (opt-in) | ⛔ Fish Audio Community License | MLX / GPU, 36 GB Mac | ❌ | ✅ | ✅ **verified** (parity + live audio) | expressive scenes: inline cues, speaker turns |
+| **OmniVoice** (opt-in) | ⛔ CC BY-NC + Boson Higgs Audio 2 Community License | MLX / GPU, 16 GB Mac | ❌ | ✅ | ✅ **verified** (probe parity + live audio) | 600+ languages, designed voices, audiobooks |
 
-> **License hygiene:** the default models are Apple's system voices and Apache/MIT/OpenRAIL-*weights* models. **Drama 3 is the one exception, and it is opt-in**: its engine will not start until the caller names its licence version (below). Other restrictive models (Fish S2, F5-TTS, Higgs, XTTS) and Llama-licensed weights (Orpheus) are deliberately **not** supported.
+> **License hygiene:** the default models are Apple's system voices and Apache/MIT/OpenRAIL-*weights* models. **Drama 3 and OmniVoice are the exceptions, and both are opt-in**: neither engine will start until the caller names its licence version (below). Other restrictive models (Fish S2, F5-TTS, Higgs Audio as a TTS model, XTTS) and Llama-licensed weights (Orpheus) are deliberately **not** supported.
 
 ## Architecture
 
@@ -134,6 +135,73 @@ Drama 3 sometimes never says end-of-speech: one sentence, then steady hiss until
 - Streaming playback is wired (`chunks`), but listened to only through files.
 - The engine has no rate control (Drama 3 has none) and no named voices.
 
+## OmniVoice — opt-in, restricted licences, 16 GB Macs
+
+`import OmniVoiceTTS`. [k2-fsa/OmniVoice](https://huggingface.co/k2-fsa/OmniVoice): a diffusion language model over a Qwen3 backbone writing nine codebooks of Boson's Higgs Audio 2 tokens at 24 kHz — **600+ languages**, a **voice designed from fixed words**, or one **cloned** from a clip and its transcript. The network is [mlx-audio-swift](https://github.com/Blaizzy/mlx-audio-swift)'s port (`OmniVoiceModel`, used as is); this engine adds what the port leaves to its caller and the reference implementation does itself: the voice-design vocabulary check, language codes, splitting long text with the first piece as the voice for the rest, the reference's audio clean-up, tags tokenized the way the model was trained, and a licence gate.
+
+```swift
+import OmniVoiceTTS
+
+let engine = try OmniVoiceEngine(modelDirectory: folder, licence: OmniVoiceLicence.version)  // naming it is accepting it
+try await engine.prepare()                                    // ~1 s from a warm disk
+var settings = OmniVoiceSettings(voiceDesign: "male, elderly, low pitch, british accent", seed: 7)
+let (audio, report) = try await engine.synthesize("Good evening. [laughter] Do come in.", settings: settings)
+settings.reference = OmniVoiceReference(audio: clip, transcript: "Exactly what is said in the clip.")
+for try await piece in engine.chunks(longText, settings: settings) { /* append piece.samples */ }
+```
+
+**The licences.** Two sets of weights, neither open. The speech model is **CC BY-NC** (the model card names no version; "due to constraints from its training data") — non-commercial only. Its audio tokenizer is Boson AI's Higgs Audio 2, under the **Boson Higgs Audio 2 Community License**, built on the Meta Llama 3 Community License: Llama 3's Acceptable Use Policy applies, its output may not be used to improve another large language model, above 100,000 annual active users a licence from Boson is required, and both licence texts and a NOTICE travel with anything that uses it — they are in [LICENSES/](LICENSES/) and compiled in as `OmniVoiceLicence.higgsAudioLicenceText` / `.llama3LicenceText` / `.notice`. The model card forbids unauthorised cloning and impersonation. (The mlx-community conversion's card says apache-2.0: that is the *code's* licence.) `OmniVoiceEngine` throws `licenceNotAccepted` unless handed `OmniVoiceLicence.version`, and refuses Macs under 16 GB. It downloads nothing; the caller supplies the folder (the `speak` CLI fetches it pinned and checksummed).
+
+> Built with Higgs Materials licensed from Boson AI USA, Inc., Copyright Boson AI USA, Inc., All Rights Reserved and Meta Llama 3 licensed under the Meta Llama 3 Community License, Copyright Meta Platforms, Inc., All Rights Reserved. Based on Meta Llama 3.
+
+**Which weights.** [mlx-community/OmniVoice](https://huggingface.co/mlx-community/OmniVoice) (float32, 3.27 GB, pinned at `defe4bdc`) — the only conversion whose audio tokenizer keeps the semantic encoder, which encoding *any* reference needs: a clone, and the first piece of a long text that the rest are voiced from. The bfloat16 conversion (1.63 GB) strips it, and the port casts every weight to float32 on load anyway, so it would save disk, not memory; the 8-bit one does not load (the port has no quantized layers). So: one download, float32 on disk, and the engine then holds the speech model in **bfloat16** (`precision: .bfloat16`, the default; `.float32` is the port's own).
+
+**Voice design is a closed vocabulary** — one word per category, comma-separated: gender (`male`, `female`); age (`child`, `teenager`, `young adult`, `middle-aged`, `elderly`); pitch (`very low pitch` … `very high pitch`); `whisper`; ten English accents (`british accent`, `indian accent` …); twelve Chinese dialects (`四川话` …). `VoiceDesignVocabulary.resolve` is the reference's own check, ported: anything else is refused with the list and the nearest word ("did you mean 'british accent'?"), two words from one category are refused, and Chinese text turns the words Chinese, as the reference does. There is deliberately no free-text mapper — the caller picks the words. Measured in the reference: "high"/"very high pitch" go breathy rather than higher (a female voice: 267 Hz at moderate, 216 at high, 179 at very high). Here, the same design and seed repeat bit for bit.
+
+**Tags.** Only thirteen are trained: `[laughter]`, `[sigh]`, `[confirmation-en]`, `[question-en|ah|oh|ei|yi]`, `[surprise-ah|oh|wa|yo]`, `[dissatisfaction-hnn]`; uppercase CMU phonemes in brackets (`[B EY1 S]`) override a pronunciation. Anything else in brackets is **read aloud** ("[whispers]" → "Whispers"), so `OmniTags.filter` removes it (and Drama's `{cues}` and `<|speaker:N|>`), reporting what went. Question tags are moved, because where they sit decides whether the clip survives — measured over four seeds each, transcribed back:
+
+| written | clips that came out as noise |
+|---|---|
+| `You are leaving already [question-en]` | 2 / 4 |
+| `You are leaving already? [question-en]` | 4 / 4 |
+| `You are leaving already. [question-en]` | 4 / 4 |
+| `[question-en] You are leaving already?` | 3 / 4 |
+| `You are leaving already [question-en]?` | **0 / 4** (and 0 / 4 on four more seeds) |
+| `You are leaving already [question-en] so soon?` | 0 / 4 |
+
+so every one of the broken forms is rewritten to the `words [question-xx]?` form; `[question-ah]` there still lost its words once in four. Confirmation, surprise, laughter and sigh tags were not affected and stay where they are. Tags are tokenized standalone, as the reference does (`TagAwareTokenizer` wraps the port's tokenizer) — inline, Qwen's pre-tokenizer glues the space before a tag to its bracket.
+
+**Languages.** `OmniLanguages.resolve` takes a code from the model's table (646), a name ("Welsh", "Cantonese") or a BCP-47 tag ("pt-BR", "ar" → `arb`); unknown is an error. Without one the model detects the language. **Thai and Khmer are tokenized differently** by swift-transformers than by the reference (25 languages in 18 scripts compared token for token against Hugging Face `tokenizers`; only these two differ — Swift's BPE returns whole words the reference splits), and the model drops words: Thai round-tripped at 51 % character error against the reference's 4 %. `OmniText.tokenizerCaveat` flags such text.
+
+**Long text** is split as the reference splits it — when the estimate passes 30 s, at punctuation into ~15 s pieces, never after "Mr." — and, unless a voice is cloned, the first piece becomes the reference for the rest so the voice does not drift. `chunks()` streams the pieces, so long text is never held whole; each piece gets the reference's clean-up (pauses over 1 s cut to 1 s, edges trimmed to 100 ms, 100 ms fades, 100 ms between pieces).
+
+### Measured (M3 Max, 36 GB)
+
+Against the probe's PyTorch reference clips (same text, voice design, language and seed — PyTorch and MLX seeds do not produce the same audio, so this compares measurements, not samples), transcribed back with `transcribe`:
+
+| | reference (PyTorch fp32) | Swift, float32 | Swift, bfloat16 |
+|---|---|---|---|
+| designs, repeats, clones (17 English clips) | 0 % WER | 0 % WER | 0 % WER |
+| es · fr · de · zh · ar | 0 % | 0 % | 0 % |
+| ja (CER, Apple / Whisper) | 5.7 % / 0 % | 5.7 % / 0 % | 5.7 % / 0 % |
+| cy · sw (Whisper) | 16 % · 11 % | 11 % · 11 % | 21 % · 28 % |
+| th (CER, Whisper) | 4 % | 51 % | 54 % |
+| clone of a `say` voice, median pitch (ref Daniel 114 Hz, Karen 191 Hz) | 112–117 · 188–190 | 113–115 · 188–192 | 114–116 · 185–187 |
+| British elderly male design, median pitch | 88 Hz | 92 Hz | 91 Hz |
+| same design + seed, three times | identical | identical | identical |
+
+(Welsh and Swahili are one clip each and the judge is the weak link there; the bfloat16 numbers move within that noise.)
+
+**Speed and memory.** Loading takes 0.9–1.4 s from a warm disk. Generation, real-time factor over five sentences — **measured while another agent ran FLUX image generation on the same GPU for most of the session**, so these are medians with the best runs in brackets, not clean figures:
+
+| | float32 | bfloat16 (default) |
+|---|---|---|
+| 32 steps (reference default) | 0.7× (≤1.4×) | 1.4× (≤2.4×) |
+| 16 steps | 1.7× (≤2.6×) | 1.6× (≤2.5×) |
+| peak footprint | 5.8–6.0 GB | 3.7–4.3 GB |
+
+The Python MLX probe (bfloat16, uncontended) reached 2.95× at 32 steps and 5.55× at 16; the port runs the conditional and unconditional passes one after the other rather than as a batch, which is likely most of the gap. Streamed to disk a piece at a time, a 29-minute chapter peaked at 5.65 GB and a 4-minute one at 5.68 GB (sampled every 30 s through the long one: median 2.8 GB, the highest spike in its last third no higher than in its first) — the footprint does not grow with length.
+
 ## Status
 
 - ✅ **Core (`SpeechSynthesizer`) — built + unit-tested (19 tests).** `SpokenAudio` WAV encode/decode, `TTSModel` metadata/licensing, `SynthesisOptions`, errors. Zero deps.
@@ -184,22 +252,24 @@ For a shipping commercial product, consider hosting the weights yourself (your o
 swift test
 ```
 
-Covers the core: WAV encoding (header, sample rate, clamping), model licensing/runtime invariants, options clamping, and errors — and for Drama 3 the text chunking against the reference's own outputs, the licence and memory gates, the frame budget and the dead-air rule. The parity probes need the model and Python's dumps, so they are opt-in:
+Covers the core: WAV encoding (header, sample rate, clamping), model licensing/runtime invariants, options clamping, and errors — for Drama 3 the text chunking against the reference's own outputs, the licence and memory gates, the frame budget and the dead-air rule — and for OmniVoice the vocabulary, tag filtering and question-tag placement, language codes, chunking, audio clean-up, the licence and memory gates and the model-folder checks (36 tests, no model). The model tests and the parity probes need weights, so they are opt-in:
 
 ```bash
 DRAMA_MODEL=<model folder> DRAMA_REFERENCE=<dump folder> swift test --filter "DramaParity|DramaStepParity"
 DRAMA_MODEL=<model folder> DRAMA_LONG_CODES=<codes.safetensors> swift test --filter DramaCodecStream
+OMNIVOICE_MODEL=<mlx-community/OmniVoice folder> swift test --filter OmniVoiceModelTests
 ```
 
 ## Requirements
 
 - macOS 14+ / iOS 17+ (the core). Individual engines raise this — FluidAudio and MLX target newer OSes; a Core AI backend (WWDC 2026) would require macOS 27 / iOS 27.
 - Drama 3: Apple silicon with **36 GB** of memory or more, and 24 GB of disk for the model.
+- OmniVoice: Apple silicon with **16 GB** of memory or more, and 3.3 GB of disk for the model.
 - Swift 6.0+
 
 ## License
 
-MIT License (this package) — see LICENSE. Each **model's** weights carry their own licence; see the table above. Drama 3's weights are under the Fish Audio Community License v1.0 (Copyright © 39 AI, INC.), which this package does not redistribute; `DramaTTS` is a port of `fish_drama3` from [mlx-audio](https://github.com/Blaizzy/mlx-audio) (MIT, Copyright (c) 2024 Prince Canuma), and reuses mlx-swift-lm (MIT, Copyright (c) 2024 ml-explore) and mlx-audio-swift (MIT, Copyright (c) 2025 Prince Canuma). Built with Fish Audio.
+MIT License (this package) — see LICENSE. Each **model's** weights carry their own licence; see the table above. Drama 3's weights are under the Fish Audio Community License v1.0 (Copyright © 39 AI, INC.), which this package does not redistribute; OmniVoice's are CC BY-NC (Xiaomi Corp. and the OmniVoice authors) with Boson AI's Higgs Audio 2 tokenizer under the Boson Higgs Audio 2 Community License and the Meta Llama 3 Community License (texts and NOTICE in [LICENSES/](LICENSES/)), also not redistributed — `OmniVoiceTTS` ports parts of k2-fsa/OmniVoice's Apache-2.0 code (voice-design check, text chunking, duration rule, audio clean-up); `DramaTTS` is a port of `fish_drama3` from [mlx-audio](https://github.com/Blaizzy/mlx-audio) (MIT, Copyright (c) 2024 Prince Canuma), and reuses mlx-swift-lm (MIT, Copyright (c) 2024 ml-explore) and mlx-audio-swift (MIT, Copyright (c) 2025 Prince Canuma). Built with Fish Audio.
 
 ## Author
 
