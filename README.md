@@ -99,7 +99,7 @@ try await engine.prepare()            // downloads MLX weights (GB) on first run
 let audio = try await engine.synthesize("The best-sounding open model.")
 ```
 
-## Drama 3 — opt-in, restricted licence, 36 GB Macs
+## Drama 3 — opt-in, restricted licence, 36 GB Macs (32 GB lite)
 
 `import DramaTTS`. Fish Audio's [Drama 3](https://huggingface.co/fishaudio/drama-3): a 35B mixture-of-experts backbone (3B active; Qwen3.5-MoE, gated-delta + full attention), a codebook audio tower and Fish's 44.1 kHz DAC codec — ported to MLX in Swift from mlx-audio's `fish_drama3` and run from the 4-bit community conversion ([stickerdaniel/drama-3-mlx-4bit](https://huggingface.co/stickerdaniel/drama-3-mlx-4bit), pinned at `06469309`). Delivery cues go inline, where they should happen; speakers are tags; a voice is cloned from a clip **and its transcript**.
 
@@ -113,7 +113,7 @@ let audio = try await engine.synthesize(
 for try await piece in engine.chunks("[whispering] Don't tell anyone.") { /* play piece.samples as they come */ }
 ```
 
-**The licence** — the Fish Audio Community License v1.0, not an open licence: free for research and non-commercial use; commercial use only while your organisation's annual revenue is under US$500,000; **never as a hosted service** where others generate speech or clone voices from text or samples they supply; **never to imitate an identifiable person's voice without their consent**; anything shipped with it must say "Built with Fish Audio". `DramaEngine` throws `licenceNotAccepted` unless handed `DramaLicence.version`, and refuses Macs under 36 GB (`insufficientMemory`). The engine does not download: the model folder comes from the caller (the `speak` CLI fetches it, pinned and checksummed). **Built with Fish Audio.**
+**The licence** — the Fish Audio Community License v1.0, not an open licence: free for research and non-commercial use; commercial use only while your organisation's annual revenue is under US$500,000; **never as a hosted service** where others generate speech or clone voices from text or samples they supply; **never to imitate an identifiable person's voice without their consent**; anything shipped with it must say "Built with Fish Audio". `DramaEngine` throws `licenceNotAccepted` unless handed `DramaLicence.version`, and refuses Macs under 36 GB (`insufficientMemory`; 32 GB for a lite folder, below). The engine does not download: the model folder comes from the caller (the `speak` CLI fetches it, pinned and checksummed). **Built with Fish Audio.**
 
 ### Measured (M3 Max, 36 GB)
 
@@ -135,6 +135,36 @@ for try await piece in engine.chunks("[whispering] Don't tell anyone.") { /* pla
 **Free-running:** the eight probe lines (plain, `[stressed]`, `{feeling stressed}`, start-of-line `[whispering]`, mid-line `[shaky breath]`, `[angry]`, a two-speaker dialogue, Spanish) transcribed back word-for-word, 8/8. Cloning from a synthetic `say` voice: the Daniel clip (median pitch 109 Hz) came back at 115–122 Hz, Karen (188 Hz) at 210 Hz, against 285–306 Hz unreferenced — and word-perfect.
 
 **Speed and memory:** loading takes 5–6 s; in a warm process generation runs **1.6–1.7× real time** on a quiet Mac (1.1–1.5× with a browser open; the Python reference: 1.8×), first audio **0.6–0.8 s**. The first clip in a process pays 3–8 s of GPU warm-up (13 s on the very first run of a new binary). **Peak footprint 25.8 GB**: MLX's buffer cache is capped at 256 MB once the model loads (29.2 GB uncapped, no speed lost); the Python reference peaked at 29–33 GB.
+
+### The lite tier: 32 GB Macs
+
+`DramaLiteConversion.convert(from:to:plan:sourceRevision:)` makes a second model folder from
+the download, on the Mac that will use it: each routed expert's 4-bit weights are dequantised
+and quantised again to `DramaLitePlan.lite` (3 bits, MLX affine, groups of 64; round to
+nearest — no calibration, no training), shard by shard, with config.json's quantisation table,
+a NOTICE saying what changed (as the Fish Audio Community License asks of a Derivative Work)
+and a `LITE.json` stamp written last. It takes about 20 s and 17 GB of disk; nothing is
+downloaded or uploaded. `DramaEngine` recognises the stamp and starts on 32 GB instead of 36.
+
+Measured on the M3 Max against the download (`full`), on the same 44 lines and seeds: the
+eight probe lines and the six bake-off texts (WER by `transcribe`), the `[angry]` line and the
+same words plain at five seeds each, and the four runaway lines at five seeds each. The bars,
+set before measuring: WER within 2 points, at least 19 of the 20 runaway clips complete.
+
+| Folder | Weights | Peak memory footprint | WER (the 11 lines all three finished) | Clips ending in dead air (of 44) | Runaway set complete | Warm speed | Starts on |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| download (experts 4-bit, rest 8-bit) | 22.2 GB | 25.9 GB | 4.2 % | 2 | 20/20 | 1.4–1.6× real time (after the first clip) | 36 GB |
+| **lite** (experts 3-bit) | 18.2 GB | **21.9 GB** | **4.5 %** | **1** | **19/20** | 1.2–1.7× | **32 GB** |
+| experts 2-bit, down projections 3-bit (not shipped) | 15.5 GB | 19.3 GB | 5.3 % | 5 | 15/20 | — | — |
+
+Two things this rules out for 16 GB. **Lazy expert loading** cannot help: counting the experts
+each layer routed to, a 4 s line already touches a median of 192 of the 256 in every layer
+(67–75 %), and the 65 s paragraph 239 (93 %), so nearly all of them are resident within
+seconds and memory-mapping them would only add paging. **Two-bit experts** lose a quarter of
+the runaway clips and still peak at 19.3 GB, because the attention, tower, embeddings and the
+codec (5.6 GB together) stay. The cue check did not resolve: `[angry]` against the same words
+plain measured +0.8 dB (download) and +0.0 dB (lite) integrated loudness, with a 6 dB spread
+across seeds on both — each seed picks a different voice, so five seeds cannot separate them.
 
 ### Runaways, and the rewind that fixes them
 

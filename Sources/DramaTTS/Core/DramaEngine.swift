@@ -12,7 +12,8 @@
 //
 //  Opt-in twice over: the engine will not start unless it is handed
 //  ``DramaLicence/version`` — the Fish Audio Community License is not an open
-//  licence — and it refuses Macs with less than 36 GB of memory.
+//  licence — and it refuses Macs with less than 36 GB of memory (32 GB for a
+//  lite folder made by ``DramaLiteConversion``).
 //
 
 import Foundation
@@ -53,13 +54,17 @@ public actor DramaEngine: TTSEngine {
                 physicalMemory: UInt64 = ProcessInfo.processInfo.physicalMemory,
                 bufferCacheLimit: Int? = 256 << 20) throws(DramaError) {
         guard licence == DramaLicence.version else { throw .licenceNotAccepted(expected: DramaLicence.version) }
-        if let problem = MemoryFloor.problem(physicalMemory: physicalMemory) { throw problem }
+        let lite = DramaLiteStamp.read(modelDirectory) != nil
+        if let problem = MemoryFloor.problem(physicalMemory: physicalMemory, lite: lite) { throw problem }
         self.modelDirectory = modelDirectory
         self.bufferCacheLimit = bufferCacheLimit
     }
 
     /// The least memory the engine starts on, in bytes.
     public static var minimumMemory: UInt64 { MemoryFloor.minimumBytes }
+
+    /// The least memory the engine starts on with the full or the lite folder, in bytes.
+    public static func minimumMemory(lite: Bool) -> UInt64 { MemoryFloor.requirement(lite: lite).minimumBytes }
 
     public var isReady: Bool { pipeline != nil }
 
