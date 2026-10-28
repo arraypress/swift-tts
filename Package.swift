@@ -46,6 +46,8 @@ let package = Package(
         .package(url: "https://github.com/huggingface/swift-transformers.git", .upToNextMajor(from: "1.1.6")),
         // OmniVoice loads through mlx-audio-swift's Hugging Face cache layout.
         .package(url: "https://github.com/huggingface/swift-huggingface.git", .upToNextMajor(from: "0.9.0")),
+        // The OmniVoice port prints to stdout while it loads, where speak writes WAV bytes.
+        .package(url: "https://github.com/arraypress/swift-stdout-silencer.git", from: "0.1.0"),
     ],
     targets: [
         .target(
@@ -100,6 +102,7 @@ let package = Package(
                 .product(name: "MLXAudioTTS", package: "mlx-audio-swift"),
                 .product(name: "HuggingFace", package: "swift-huggingface"),
                 .product(name: "Tokenizers", package: "swift-transformers"),
+                .product(name: "StdoutSilencer", package: "swift-stdout-silencer"),
             ]
         ),
         .testTarget(

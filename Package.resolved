@@ -1,5 +1,5 @@
 {
-  "originHash" : "609a6ee1940efc457a05b25219612206b10c50efd08a8bd2ddbf45f7fdcfb2a6",
+  "originHash" : "2cfdecfba77afd17fac09a3a5d301b166fc2771299c712766d2fb1d19d494350",
   "pins" : [
     {
       "identity" : "eventsource",
@@ -125,6 +125,15 @@
       "state" : {
         "revision" : "0c0290ff6b24942dadb83a929ffaaa1481df04a2",
         "version" : "1.1.1"
+      }
+    },
+    {
+      "identity" : "swift-stdout-silencer",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/arraypress/swift-stdout-silencer.git",
+      "state" : {
+        "revision" : "16d36efddd9149e9d50d6cf2262ef82340c69977",
+        "version" : "0.1.0"
       }
     },
     {

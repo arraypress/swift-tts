@@ -23,6 +23,7 @@ import HuggingFace
 import MLX
 import MLXAudioTTS
 import MLXNN
+import StdoutSilencer
 
 /// The model folder: what it must hold, what it can do, and loading it.
 enum OmniModelFolder {
@@ -93,23 +94,5 @@ extension OmniModelFolder {
             .map { key, value in (key, value.dtype.isFloatingPoint ? value.asType(dtype) : value) }
         model.update(parameters: ModuleParameters.unflattened(converted))
         eval(model)
-    }
-}
-
-/// Points the process's standard output at /dev/null for a while.
-enum StandardOutput {
-
-    static func silenced<T>(_ body: () async throws -> T) async rethrows -> T {
-        fflush(stdout)
-        let saved = dup(STDOUT_FILENO)
-        let null = open("/dev/null", O_WRONLY)
-        dup2(null, STDOUT_FILENO)
-        close(null)
-        defer {
-            fflush(stdout)
-            dup2(saved, STDOUT_FILENO)
-            close(saved)
-        }
-        return try await body()
     }
 }
